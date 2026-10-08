@@ -2,7 +2,7 @@ import React from "react";
 import LoginPage from "../components/AdminAuth/LoginPage";
 import ProfilePage from "../components/AdminAuth/ProfilePage";
 
-const auth = () => {
+const Auth = () => {
   return (
     <section>
       <LoginPage />
@@ -11,4 +11,4 @@ const auth = () => {
   );
 };
 
-export default auth;
+export default Auth;
