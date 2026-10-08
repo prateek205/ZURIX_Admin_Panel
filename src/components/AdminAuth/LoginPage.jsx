@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useAdminLoginMutation } from "../../redux/AdminApi";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Login = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -18,8 +22,12 @@ const Login = () => {
       });
 
       console.log("LOGIN_DATA:", response);
+
+      navigate("/");
+      toast.success("Login Successfull...");
     } catch (error) {
       console.log("LOGIN_ERROR:", error);
+      toast.error("Login Failed");
     }
   };
 
