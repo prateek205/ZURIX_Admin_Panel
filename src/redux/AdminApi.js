@@ -4,7 +4,7 @@ const AdminApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     adminLogin: builder.mutation({
       query: (newData) => ({
-        url: "/admin/loginAdmin",
+        url: "/admin/adminLogin",
         method: "POST",
         body: newData,
       }),
@@ -21,7 +21,7 @@ const AdminApi = baseApi.injectEndpoints({
 
     adminLogout: builder.mutation({
       query: () => ({
-        url: "/admin/logoutAdmin",
+        url: "/admin/adminLogout",
         method: "POST",
       }),
       invalidatesTags: ["Admin"],
