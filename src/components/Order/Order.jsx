@@ -9,6 +9,7 @@ import {
 } from "react-icons/bi";
 import { BsEye } from "react-icons/bs";
 import { LuSlidersHorizontal } from "react-icons/lu";
+import OrderViewModal from "./OrderModel";
 
 const Orders = () => {
   const {
@@ -20,6 +21,7 @@ const Orders = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   console.log("ORDERS_DATA:", getAllOrders);
 
@@ -330,7 +332,7 @@ const Orders = () => {
                       <button
                         type="button"
                         title="View order"
-                        onClick={() => console.log("Selected order:", order)}
+                        onClick={() => setSelectedOrder(order)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-gray-400 hover:bg-gray-100"
                       >
                         <BsEye size={17} />
@@ -374,6 +376,11 @@ const Orders = () => {
           </p>
         </div>
       </div>
+      <OrderViewModal
+        isOpen={Boolean(selectedOrder)}
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+      />
     </section>
   );
 };
