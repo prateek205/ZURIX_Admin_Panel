@@ -137,8 +137,7 @@ const Orders = () => {
   // Loading state
   if (isLoading) {
     return (
-      <section className="min-h-screen bg-gray-50 p-6">
-        <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+      <section className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <p className="mt-4 text-sm text-gray-500">Loading orders...</p>
       </section>
     );
@@ -148,7 +147,6 @@ const Orders = () => {
   if (isError) {
     return (
       <section className="min-h-screen bg-gray-50 p-6">
-        <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
         <p className="mt-4 text-sm text-red-600">
           Failed to load orders.{" "}
           {error?.data?.message || error?.error || "Please try again."}
