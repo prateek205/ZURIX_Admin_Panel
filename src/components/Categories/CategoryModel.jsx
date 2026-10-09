@@ -130,16 +130,18 @@ const CategoryModel = ({ isOpen, onClose }) => {
             </div>
 
             {/* Image URL */}
+
+            {/* Image URL */}
             <div>
               <label
                 htmlFor="categoryImage"
-                className="text-sm font-medium text-gray-700"
+                className="mb-1 block text-sm font-medium text-gray-700"
               >
                 Image URL *
               </label>
 
-              <div className="relative mt-1">
-                <FaImage className="absolute left-3 top-3.5 text-gray-400" />
+              <div className="relative">
+                <FaImage className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
 
                 <input
                   id="categoryImage"
@@ -149,7 +151,7 @@ const CategoryModel = ({ isOpen, onClose }) => {
                   onChange={handleChange}
                   placeholder="https://example.com/category.jpg"
                   required
-                  className={`${inputClass} mt-0 pl-9`}
+                  className="h-11 w-full rounded-lg border border-gray-200 pl-10 pr-3 text-sm outline-none transition focus:border-black"
                 />
               </div>
 
@@ -161,7 +163,7 @@ const CategoryModel = ({ isOpen, onClose }) => {
                   <img
                     src={formData.image}
                     alt="Category preview"
-                    className="h-36 w-full rounded-lg border border-gray-200 bg-gray-50 object-cover"
+                    className="h-36 w-full rounded-lg border border-gray-200 bg-gray-50 object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
