@@ -7,6 +7,7 @@ import { Slide, ToastContainer } from "react-toastify";
 import Products from "./pages/products";
 import Category from "./pages/category";
 import Order from "./pages/order";
+import Customer from "./pages/customer";
 
 const App = () => {
   return (
@@ -32,6 +33,7 @@ const App = () => {
           <Route path="/products" element={<Products />} />
           <Route path="/categories" element={<Category />} />
           <Route path="/orders" element={<Order />} />
+          <Route path="/customers" element={<Customer />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
