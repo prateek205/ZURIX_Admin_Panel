@@ -1,10 +1,29 @@
 import React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAdminLogoutMutation } from "../redux/AdminApi";
+import { toast } from "react-toastify";
 
 const Navbar = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
+
+  const [adminLogout, { isLoading, isError }] = useAdminLogoutMutation();
+
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await adminLogout().unwrap();
+
+      console.log("LOGOUT_DATA:", response);
+
+      navigate("/login");
+      toast.success("Admin Logout Successfully");
+    } catch (error) {
+      console.log("LOGOUT_ERROR:", error);
+      toast.error("Admin Logout Failed");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/95 backdrop-blur-md font-zurixFont">
@@ -120,10 +139,11 @@ const Navbar = () => {
                   onClick={() => {
                     setProfileOpen(false);
                     navigate("/login");
+                    handleLogout;
                   }}
                   className="w-full px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50"
                 >
-                  Sign out
+                  Logout
                 </button>
               </div>
             )}

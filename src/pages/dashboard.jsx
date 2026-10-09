@@ -1,12 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { useAdminLogoutMutation } from "../redux/AdminApi";
-import { toast } from "react-toastify";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-
-  const [adminLogout, { isLoading, isError }] = useAdminLogoutMutation();
-
   const cards = [
     {
       title: "Products",
@@ -46,30 +40,11 @@ const Dashboard = () => {
     },
   ];
 
-  const handleLogout = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await adminLogout().unwrap();
-
-      console.log("LOGOUT_DATA:", response);
-
-      navigate("/login");
-      toast.success("Admin Logout Successfully");
-    } catch (error) {
-      console.log("LOGOUT_ERROR:", error);
-      toast.error("Admin Logout Failed");
-    }
-  };
-
   return (
     <section className="min-h-screen bg-[#f8f8f6] p-5 sm:p-8 lg:p-10 font-zurixFont">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-10">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-gray-500 mb-2">
-            ZURIX / Admin
-          </p>
-
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-black">
             Dashboard
           </h1>
@@ -78,29 +53,6 @@ const Dashboard = () => {
             Welcome back. Manage your store from one place.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex items-center justify-center gap-2 self-start sm:self-auto rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-800 transition hover:border-black hover:bg-black hover:text-white"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <path d="M16 17l5-5-5-5" />
-            <path d="M21 12H9" />
-          </svg>
-          Logout
-        </button>
       </div>
 
       {/* Welcome Banner */}
