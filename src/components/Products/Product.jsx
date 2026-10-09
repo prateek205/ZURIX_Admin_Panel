@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGetAllProductsQuery } from "../../redux/ProductApi";
+import { FaEye } from "react-icons/fa";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-IN", {
@@ -337,7 +338,7 @@ const Product = () => {
                           onClick={() => navigate(`/products/${productId}`)}
                           className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
                         >
-                          View
+                          <FaEye />
                         </button>
 
                         <button
