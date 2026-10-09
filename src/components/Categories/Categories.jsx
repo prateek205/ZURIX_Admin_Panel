@@ -143,7 +143,7 @@ const Categories = () => {
           <table className="w-full min-w-[800px] border-collapse text-left">
             <thead>
               <tr className="border-b border-gray-200 bg-[#f5f5f3]">
-                {["#", "Category", "Status", "Actions"].map((heading) => (
+                {["#", "Category", "Status"].map((heading) => (
                   <th
                     key={heading}
                     className="whitespace-nowrap px-5 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500"
@@ -170,10 +170,6 @@ const Categories = () => {
 
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700">
-                          {(category.name || "C").charAt(0).toUpperCase()}
-                        </div>
-
                         <div>
                           <p className="font-medium text-gray-900">
                             {category.name || "Unnamed Category"}
@@ -195,34 +191,6 @@ const Categories = () => {
                       >
                         {isActive ? "Active" : "Inactive"}
                       </span>
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          title="View category"
-                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
-                        >
-                          <FaEye />
-                        </button>
-
-                        <button
-                          type="button"
-                          title="Edit category"
-                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
-                        >
-                          <BsPencilSquare />
-                        </button>
-
-                        <button
-                          type="button"
-                          title="Delete category"
-                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-red-500 hover:text-red-600"
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 );
