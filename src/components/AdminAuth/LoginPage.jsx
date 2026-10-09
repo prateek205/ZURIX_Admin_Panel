@@ -23,6 +23,8 @@ const Login = () => {
 
       console.log("LOGIN_DATA:", response);
 
+      navigate("/");
+
       toast.success("Login Successfull...");
     } catch (error) {
       console.log("LOGIN_ERROR:", error);
