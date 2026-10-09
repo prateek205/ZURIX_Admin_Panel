@@ -33,7 +33,7 @@ const ProductModal = ({
   if (!isOpen || !product) return null;
 
   const productImage = Array.isArray(product.images)
-    ? product.images[0]
+    ? product.images[0]?.url
     : product.images;
 
   const handleChange = (e) => {

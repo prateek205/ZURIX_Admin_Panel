@@ -1,8 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGetAllProductsQuery } from "../../redux/ProductApi";
+import {
+  useGetAllProductsQuery,
+  useUpdateProductMutation,
+} from "../../redux/ProductApi";
 import { FaEye, FaTrash } from "react-icons/fa";
 import { BsPencilSquare } from "react-icons/bs";
+import ProductModal from "./ProductModel";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-IN", {
@@ -23,6 +27,40 @@ const Product = () => {
   const [sort, setSort] = useState("newest");
   const [colors, setColors] = useState("");
   const [size, setSize] = useState("");
+
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [modalMode, setModalMode] = useState("view");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = (product, mode) => {
+    setSelectedProduct(product);
+    setModalMode(mode);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const [updateProduct, { isLoading: isUpdatingProduct }] =
+    useUpdateProductMutation();
+
+  const handleSaveProduct = async (updatedData) => {
+    try {
+      const productId = selectedProduct?._id || selectedProduct?.id;
+
+      await updateProduct({
+        id: productId,
+        ...updatedData,
+      }).unwrap();
+
+      toast.success("Product updated successfully!");
+      handleCloseModal();
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to update product.");
+    }
+  };
 
   // Get products from backend
   const {
@@ -336,18 +374,17 @@ const Product = () => {
                         <button
                           type="button"
                           title="View product"
-                          onClick={() => navigate(`/products/${productId}`)}
+                          onClick={() => handleOpenModal(product, "view")}
                           className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
                         >
                           <FaEye />
                         </button>
 
+                        {/* Edit Product */}
                         <button
                           type="button"
                           title="Edit product"
-                          onClick={() =>
-                            navigate(`/products/edit/${productId}`)
-                          }
+                          onClick={() => handleOpenModal(product, "edit")}
                           className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
                         >
                           <BsPencilSquare />
@@ -399,6 +436,15 @@ const Product = () => {
           </p>
         </div>
       </div>
+
+      <ProductModal
+        product={selectedProduct}
+        isOpen={isModalOpen}
+        mode={modalMode}
+        onClose={handleCloseModal}
+        onSave={handleSaveProduct}
+        isSaving={isUpdatingProduct}
+      />
     </section>
   );
 };
