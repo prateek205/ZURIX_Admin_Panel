@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useGetAllOrdersQuery } from "../../redux/OrdersApi";
 
 import {
@@ -23,52 +23,32 @@ const Orders = () => {
 
   console.log("ORDERS_DATA:", getAllOrders);
 
-  // Extract orders from the API response
-  const orders = useMemo(() => {
-    const response = getAllOrders?.data;
+  // Extract orders directly from the API response
+  const orders = Array.isArray(getAllOrders?.order) ? getAllOrders.order : [];
 
-    if (Array.isArray(response)) return response;
-    if (Array.isArray(response?.orders)) return response.orders;
-    if (Array.isArray(response?.data)) return response.data;
-    if (Array.isArray(getAllOrders?.orders)) return getAllOrders.orders;
+  // Search and filter orders
+  const search = searchTerm.trim().toLowerCase();
 
-    return [];
-  }, [getAllOrders]);
+  const filteredOrders = orders.filter((order) => {
+    const orderId = String(order?._id || order?.orderId || "");
 
-  // Search and status filtering
-  const filteredOrders = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
+    const customerName = order?.shippingAddress?.fullName || "Customer";
 
-    return orders.filter((order) => {
-      const orderId = String(order?._id || order?.orderId || "");
-      const customerName =
-        order?.user?.name ||
-        order?.userId?.name ||
-        order?.customer?.name ||
-        order?.customerName ||
-        "";
+    const email = order?.user?.email || "—";
 
-      const email =
-        order?.user?.email ||
-        order?.userId?.email ||
-        order?.customer?.email ||
-        order?.email ||
-        "";
+    const status = String(order?.orderStatus || "Pending");
 
-      const status = String(order?.status || "Pending");
+    const matchesSearch =
+      orderId.toLowerCase().includes(search) ||
+      customerName.toLowerCase().includes(search) ||
+      email.toLowerCase().includes(search);
 
-      const matchesSearch =
-        orderId.toLowerCase().includes(search) ||
-        customerName.toLowerCase().includes(search) ||
-        email.toLowerCase().includes(search);
+    const matchesStatus =
+      statusFilter === "All" ||
+      status.toLowerCase() === statusFilter.toLowerCase();
 
-      const matchesStatus =
-        statusFilter === "All" ||
-        status.toLowerCase() === statusFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, searchTerm, statusFilter]);
+    return matchesSearch && matchesStatus;
+  });
 
   // Statistics from API data
   const stats = [
@@ -81,7 +61,7 @@ const Orders = () => {
     {
       title: "Pending Orders",
       value: orders.filter(
-        (order) => order?.status?.toLowerCase() === "pending",
+        (order) => String(order?.orderStatus).toLowerCase() === "pending",
       ).length,
       icon: BiPackage,
       color: "bg-amber-50 text-amber-600",
@@ -89,7 +69,7 @@ const Orders = () => {
     {
       title: "Processing",
       value: orders.filter(
-        (order) => order?.status?.toLowerCase() === "processing",
+        (order) => String(order?.orderStatus).toLowerCase() === "processing",
       ).length,
       icon: BiPackage,
       color: "bg-violet-50 text-violet-600",
@@ -97,7 +77,7 @@ const Orders = () => {
     {
       title: "Delivered",
       value: orders.filter(
-        (order) => order?.status?.toLowerCase() === "delivered",
+        (order) => String(order?.orderStatus).toLowerCase() === "delivered",
       ).length,
       icon: BiCheckCircle,
       color: "bg-green-50 text-green-600",
@@ -111,11 +91,20 @@ const Orders = () => {
       shipped: "bg-blue-50 text-blue-700",
       delivered: "bg-green-50 text-green-700",
       cancelled: "bg-red-50 text-red-700",
+      confirm: "bg-green-50 text-green-700",
     };
 
     return (
       styles[String(status || "").toLowerCase()] || "bg-gray-100 text-gray-700"
     );
+  };
+
+  const formatStatus = (status) => {
+    const normalized = String(status || "Pending")
+      .toLowerCase()
+      .replace(/_/g, " ");
+
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   };
 
   const getPaymentStyle = (status) => {
@@ -128,7 +117,7 @@ const Orders = () => {
     new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(Number(amount) || 0);
 
   const formatDate = (date) => {
@@ -155,7 +144,7 @@ const Orders = () => {
     );
   }
 
-  // API error state
+  // Error state
   if (isError) {
     return (
       <section className="min-h-screen bg-gray-50 p-6">
@@ -253,6 +242,7 @@ const Orders = () => {
                 <option value="Shipped">Shipped</option>
                 <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
+                <option value="CONFIRM">Confirmed</option>
               </select>
             </div>
           </div>
@@ -275,42 +265,20 @@ const Orders = () => {
 
             <tbody className="divide-y divide-gray-100">
               {filteredOrders.map((order) => {
-                const customerName =
-                  order?.user?.name ||
-                  order?.userId?.name ||
-                  order?.customer?.name ||
-                  order?.customerName ||
-                  "Customer";
-
-                const email =
-                  order?.user?.email ||
-                  order?.userId?.email ||
-                  order?.customer?.email ||
-                  order?.email ||
-                  "—";
-
                 const orderId = order?._id || order?.orderId;
-                const status = order?.status || "Pending";
-                const paymentStatus =
-                  order?.paymentStatus ||
-                  order?.paymentInfo?.status ||
-                  "Pending";
-                const paymentMethod =
-                  order?.paymentMethod || order?.paymentInfo?.method || "—";
+                const customerName =
+                  order?.shippingAddress?.fullName || "Customer";
+                const email = order?.user?.email || "—";
+                const status = order?.orderStatus || "Pending";
+                const paymentStatus = order?.paymentStatus || "Pending";
+                const paymentMethod = order?.paymentMethod || "—";
 
                 const itemCount = Array.isArray(order?.items)
                   ? order.items.reduce(
-                      (total, item) => total + (Number(item?.quantity) || 1),
+                      (total, item) => total + (Number(item?.quantity) || 0),
                       0,
                     )
                   : 0;
-
-                const amount =
-                  order?.totalAmount ??
-                  order?.finalAmount ??
-                  order?.totalPrice ??
-                  order?.total ??
-                  0;
 
                 return (
                   <tr key={orderId} className="transition hover:bg-gray-50">
@@ -326,24 +294,26 @@ const Orders = () => {
                     </td>
 
                     <td className="whitespace-nowrap px-5 py-4 text-gray-600">
-                      {formatDate(order?.createdAt || order?.orderDate)}
+                      {formatDate(order?.createdAt)}
                     </td>
 
                     <td className="px-5 py-4 text-gray-600">{itemCount}</td>
 
                     <td className="whitespace-nowrap px-5 py-4 font-semibold text-gray-900">
-                      {formatPrice(amount)}
+                      {formatPrice(order?.totalAmount)}
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="flex flex-col items-start gap-1.5">
-                        <span className="text-gray-700">{paymentMethod}</span>
+                        <span className="text-gray-700">
+                          {order?.paymentMethod || "—"}
+                        </span>
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-medium ${getPaymentStyle(
                             paymentStatus,
                           )}`}
                         >
-                          {paymentStatus}
+                          {formatStatus(paymentStatus)}
                         </span>
                       </div>
                     </td>
@@ -354,7 +324,7 @@ const Orders = () => {
                           status,
                         )}`}
                       >
-                        {status}
+                        {formatStatus(status)}
                       </span>
                     </td>
 
