@@ -7,7 +7,7 @@ export const baseApi = createApi({
 
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
-    credentials: "includes",
+    credentials: "include",
   }),
 
   tagTypes: ["Admin"],
