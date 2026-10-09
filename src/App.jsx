@@ -1,7 +1,8 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Auth from "./pages/auth";
 import Dashboard from "./pages/Dashboard";
+import AdminLayout from "./layouts/AdminLayout";
 import { Slide, ToastContainer } from "react-toastify";
 
 const App = () => {
@@ -20,9 +21,19 @@ const App = () => {
         theme="dark"
         transition={Slide}
       />
+
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        {/* Public Route */}
         <Route path="/login" element={<Auth />} />
+
+        {/* Admin Layout */}
+        <Route element={<AdminLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
+
+        {/* Redirect unknown routes */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </section>
   );
