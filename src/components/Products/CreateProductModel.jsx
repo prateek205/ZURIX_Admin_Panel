@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaTimes, FaCloudUploadAlt } from "react-icons/fa";
+import { useGetAllCategoryQuery } from "../../redux/CategoryApi";
 
 const initialForm = {
   name: "",
