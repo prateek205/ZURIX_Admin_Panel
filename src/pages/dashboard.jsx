@@ -1,6 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { useAdminProfileQuery } from "../redux/AdminApi";
 
 const Dashboard = () => {
+  const { data: adminProfile, isLoading, isError } = useAdminProfileQuery();
+
+  console.log("ADMIN_PROFILE:", adminProfile);
+
   const cards = [
     {
       title: "Products",
@@ -49,8 +54,8 @@ const Dashboard = () => {
             Dashboard
           </h1>
 
-          <p className="mt-2 text-sm text-gray-500">
-            Welcome back. Manage your store from one place.
+          <p className="mt-2 text-2xl text-gray-500">
+            Welcome back 👋{adminProfile?.data?.name}
           </p>
         </div>
       </div>
