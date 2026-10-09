@@ -23,16 +23,10 @@ const App = () => {
       />
 
       <Routes>
-        {/* Public Route */}
         <Route path="/login" element={<Auth />} />
-
-        {/* Admin Layout */}
         <Route element={<AdminLayout />}>
-          <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Route>
-
-        {/* Redirect unknown routes */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </section>
