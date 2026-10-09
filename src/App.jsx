@@ -6,6 +6,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import { Slide, ToastContainer } from "react-toastify";
 import Products from "./pages/products";
 import Category from "./pages/category";
+import Order from "./pages/order";
 
 const App = () => {
   return (
@@ -30,6 +31,7 @@ const App = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
           <Route path="/categories" element={<Category />} />
+          <Route path="/orders" element={<Order />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
