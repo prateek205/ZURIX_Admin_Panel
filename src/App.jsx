@@ -1,13 +1,15 @@
 import React from "react";
-import { Route, Router } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Auth from "./pages/auth";
+import Dashboard from "./pages/dashboard";
 
 const App = () => {
   return (
     <section>
-      <Router>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Auth />} />
-      </Router>
+      </Routes>
     </section>
   );
 };
