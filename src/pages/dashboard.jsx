@@ -7,6 +7,45 @@ const Dashboard = () => {
 
   const [adminLogout, { isLoading, isError }] = useAdminLogoutMutation();
 
+  const cards = [
+    {
+      title: "Products",
+      description: "Add, edit, and manage your product catalog.",
+      path: "/products",
+      number: "01",
+    },
+    {
+      title: "Categories",
+      description: "Organize products into store categories.",
+      path: "/categories",
+      number: "02",
+    },
+    {
+      title: "Orders",
+      description: "Review customer orders and their status.",
+      path: "/orders",
+      number: "03",
+    },
+    {
+      title: "Customers",
+      description: "View and manage your customer information.",
+      path: "/customers",
+      number: "04",
+    },
+    {
+      title: "Coupons",
+      description: "Manage discount codes and promotions.",
+      path: "/coupons",
+      number: "05",
+    },
+    {
+      title: "Inventory",
+      description: "Keep track of your available stock.",
+      path: "/inventory",
+      number: "06",
+    },
+  ];
+
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
@@ -101,44 +140,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {[
-          {
-            title: "Products",
-            description: "Add, edit, and manage your product catalog.",
-            path: "/products",
-            number: "01",
-          },
-          {
-            title: "Categories",
-            description: "Organize products into store categories.",
-            path: "/categories",
-            number: "02",
-          },
-          {
-            title: "Orders",
-            description: "Review customer orders and their status.",
-            path: "/orders",
-            number: "03",
-          },
-          {
-            title: "Customers",
-            description: "View and manage your customer information.",
-            path: "/customers",
-            number: "04",
-          },
-          {
-            title: "Coupons",
-            description: "Manage discount codes and promotions.",
-            path: "/coupons",
-            number: "05",
-          },
-          {
-            title: "Inventory",
-            description: "Keep track of your available stock.",
-            path: "/inventory",
-            number: "06",
-          },
-        ].map((item) => (
+        {cards.map((item) => (
           <button
             key={item.number}
             type="button"
