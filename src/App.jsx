@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Auth from "./pages/auth";
-import Dashboard from "./pages/Dashboard"
+import Dashboard from "./pages/dashboard"
 import AdminLayout from "./layouts/AdminLayout";
 import { Slide, ToastContainer } from "react-toastify";
 
