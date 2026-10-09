@@ -5,6 +5,7 @@ import Dashboard from "./pages/dashboard";
 import AdminLayout from "./layouts/AdminLayout";
 import { Slide, ToastContainer } from "react-toastify";
 import Products from "./pages/products";
+import Category from "./pages/category";
 
 const App = () => {
   return (
@@ -28,6 +29,7 @@ const App = () => {
         <Route element={<AdminLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/categories" element={<Category />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

@@ -1,7 +1,7 @@
 import React from "react";
 import Categories from "../components/Categories/Categories";
 
-const category = () => {
+const Category = () => {
   return (
     <section>
       <Categories />
@@ -9,4 +9,4 @@ const category = () => {
   );
 };
 
-export default category;
+export default Category;
