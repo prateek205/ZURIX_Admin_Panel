@@ -16,6 +16,18 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
   const [formData, setFormData] = useState(initialForm);
   const [images, setImages] = useState([]);
 
+  const {
+    data: categoryResponse,
+    isLoading: isCategoriesLoading,
+    isError: isCategoriesError,
+  } = useGetAllCategoryQuery();
+
+  const categories = Array.isArray(categoryResponse?.data)
+    ? categoryResponse.data
+    : Array.isArray(categoryResponse?.data?.categories)
+      ? categoryResponse.data.categories
+      : [];
+
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -109,15 +121,36 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Category ID *</label>
-              <input
+              <label className="text-sm font-medium">Category *</label>
+
+              <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
                 required
+                disabled={isCategoriesLoading || isCategoriesError}
                 className={inputClass}
-                placeholder="Enter category ID"
-              />
+              >
+                <option value="">
+                  {isCategoriesLoading
+                    ? "Loading categories..."
+                    : isCategoriesError
+                      ? "Failed to load categories"
+                      : "Select Category"}
+                </option>
+
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              {isCategoriesError && (
+                <p className="mt-1 text-xs text-red-500">
+                  Unable to load categories. Please try again.
+                </p>
+              )}
             </div>
 
             <div>
