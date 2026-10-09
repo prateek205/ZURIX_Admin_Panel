@@ -56,7 +56,7 @@ const Dash = () => {
           </h1>
 
           <p className="mt-2 text-2xl text-gray-500">
-            Welcome back 👋{adminProfile?.data?.name}
+            Welcome back 👋{adminProfile?.data?.role}
           </p>
         </div>
       </div>
