@@ -8,6 +8,7 @@ import {
 } from "react-icons/bi";
 import { BsEye } from "react-icons/bs";
 import { LuSlidersHorizontal } from "react-icons/lu";
+import CustomerModel from "./CustomerModel";
 
 const Customers = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -274,11 +275,10 @@ const Customers = () => {
                   <td className="px-5 py-4 text-center">
                     <button
                       type="button"
-                      title="View customer"
                       onClick={() => setSelectedCustomer(customer)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-gray-400 hover:bg-gray-100"
+                      className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
                     >
-                      <BsEye size={17} />
+                      <BsEye size={18} />
                     </button>
                   </td>
                 </tr>
@@ -415,6 +415,11 @@ const Customers = () => {
           </div>
         </div>
       )}
+      <CustomerModel
+        isOpen={Boolean(selectedCustomer)}
+        customer={selectedCustomer}
+        onClose={() => setSelectedCustomer(null)}
+      />
     </section>
   );
 };
