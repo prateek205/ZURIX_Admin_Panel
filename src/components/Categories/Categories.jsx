@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { FaPlus, FaSearch, FaEye, FaTrash } from "react-icons/fa";
 import { BsPencilSquare } from "react-icons/bs";
 import { useGetAllCategoryQuery } from "../../redux/CategoryApi";
+import CategoryModel from "../../components/categories/CategoryModel";
 
 const Categories = () => {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   // Fetch categories from backend
@@ -80,6 +82,7 @@ const Categories = () => {
 
         <button
           type="button"
+          onClick={() => setIsAddModalOpen(true)}
           className="inline-flex h-11 items-center justify-center gap-2 self-start rounded-lg bg-black px-5 text-sm font-medium text-white transition hover:bg-gray-800"
         >
           <FaPlus size={12} />
@@ -247,6 +250,10 @@ const Categories = () => {
           </p>
         </div>
       </div>
+      <CategoryModel
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </section>
   );
 };
