@@ -3,9 +3,28 @@ import { baseApi } from "./BaseApi";
 const productApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAllProducts: builder.query({
-      query: () => ({
+      query: ({
+        search,
+        filter,
+        category,
+        maxPrice,
+        minPrice,
+        sort,
+        colors,
+        size,
+      } = {}) => ({
         url: "/products/getAllProducts",
         method: "GET",
+        params: {
+          search,
+          filter,
+          category,
+          maxPrice,
+          minPrice,
+          sort,
+          colors: Array.isArray(colors) ? colors.join(",") : colors,
+          size: Array.isArray(size) ? size.join(",") : size,
+        },
       }),
       providesTags: ["Products"],
     }),
@@ -47,7 +66,7 @@ const productApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetAllProductQuery,
+  useGetAllProductsQuery,
   useAddProductMutation,
   useGetProductIdQuery,
   useUpdateProductMutation,

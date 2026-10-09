@@ -1,126 +1,130 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-const initialProducts = [
-  {
-    id: 1,
-    name: "ZURIX Basic T-Shirt",
-    description: "Premium cotton t-shirt for casual wear.",
-    category: "Men",
-    price: 1299,
-    salePrice: 999,
-    stock: 50,
-    status: "Active",
-    image: "https://placehold.co/100x100/f5f5f5/222?text=T-Shirt",
-  },
-  {
-    id: 2,
-    name: "Slim Fit Jeans",
-    description: "Comfortable and perfect fit jeans for men.",
-    category: "Men",
-    price: 2499,
-    salePrice: 1999,
-    stock: 30,
-    status: "Active",
-    image: "https://placehold.co/100x100/f5f5f5/222?text=Jeans",
-  },
-  {
-    id: 3,
-    name: "ZURIX Handbag",
-    description: "Stylish handbag for women.",
-    category: "Women",
-    price: 3499,
-    salePrice: 2799,
-    stock: 20,
-    status: "Active",
-    image: "https://placehold.co/100x100/f5f5f5/222?text=Bag",
-  },
-  {
-    id: 4,
-    name: "Running Sneakers",
-    description: "Lightweight sneakers for everyday comfort.",
-    category: "Shoes",
-    price: 4999,
-    salePrice: 3999,
-    stock: 25,
-    status: "Active",
-    image: "https://placehold.co/100x100/f5f5f5/222?text=Shoes",
-  },
-  {
-    id: 5,
-    name: "Classic Sunglasses",
-    description: "Minimal design with UV protection.",
-    category: "Accessories",
-    price: 1999,
-    salePrice: 1499,
-    stock: 15,
-    status: "Inactive",
-    image: "https://placehold.co/100x100/f5f5f5/222?text=Glasses",
-  },
-];
+import { useGetAllProductsQuery } from "../../redux/ProductApi";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(price);
+    maximumFractionDigits: 2,
+  }).format(Number(price) || 0);
 
 const Product = () => {
   const navigate = useNavigate();
 
-  const [products, setProducts] = useState(initialProducts);
+  // Filter states
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("");
   const [category, setCategory] = useState("All");
-  const [status, setStatus] = useState("All");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [sort, setSort] = useState("newest");
+  const [colors, setColors] = useState("");
+  const [size, setSize] = useState("");
 
+  // Get products from backend
+  const {
+    data: getAllProducts,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useGetAllProductsQuery({
+    search,
+    filter,
+    category: category === "All" ? "" : category,
+    minPrice,
+    maxPrice,
+    sort,
+    colors: colors
+      .split(",")
+      .map((color) => color.trim())
+      .filter(Boolean),
+    size: size
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  });
+
+  // Extract products from API response
+  const products = Array.isArray(getAllProducts?.data)
+    ? getAllProducts.data
+    : Array.isArray(getAllProducts?.data?.products)
+      ? getAllProducts.data.products
+      : Array.isArray(getAllProducts?.products)
+        ? getAllProducts.products
+        : [];
+
+  // Dynamic categories from API products
   const categories = [
-    "All",
-    ...new Set(products.map((product) => product.category)),
+    ...new Map(
+      products
+        .map((product) => {
+          const productCategory = product?.category;
+
+          if (
+            productCategory &&
+            typeof productCategory === "object" &&
+            productCategory._id
+          ) {
+            return [
+              productCategory._id,
+              {
+                value: productCategory._id,
+                label: productCategory.name || "Unnamed Category",
+              },
+            ];
+          }
+
+          if (typeof productCategory === "string") {
+            return [
+              productCategory,
+              {
+                value: productCategory,
+                label: productCategory,
+              },
+            ];
+          }
+
+          return null;
+        })
+        .filter(Boolean),
+    ).values(),
   ];
 
-  const filteredProducts = useMemo(() => {
-    let result = products.filter((product) => {
-      const matchesSearch = product.name
-        .toLowerCase()
-        .includes(search.trim().toLowerCase());
-
-      const matchesCategory =
-        category === "All" || product.category === category;
-
-      const matchesStatus = status === "All" || product.status === status;
-
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-
-    if (sort === "priceLow") {
-      result = [...result].sort((a, b) => a.salePrice - b.salePrice);
-    } else if (sort === "priceHigh") {
-      result = [...result].sort((a, b) => b.salePrice - a.salePrice);
-    } else {
-      result = [...result].sort((a, b) => b.id - a.id);
-    }
-
-    return result;
-  }, [products, search, category, status, sort]);
-
+  // Reset all filters
   const handleReset = () => {
     setSearch("");
+    setFilter("");
     setCategory("All");
-    setStatus("All");
+    setMinPrice("");
+    setMaxPrice("");
     setSort("newest");
+    setColors("");
+    setSize("");
   };
 
-  const handleDelete = (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this sample product?",
+  if (isLoading) {
+    return (
+      <section className="min-h-screen bg-[#f8f8f6] p-6 font-zurixFont">
+        <p className="text-sm text-gray-500">Loading products...</p>
+      </section>
     );
+  }
 
-    if (confirmed) {
-      setProducts((prev) => prev.filter((product) => product.id !== id));
-    }
-  };
+  if (isError) {
+    return (
+      <section className="min-h-screen bg-[#f8f8f6] p-6 font-zurixFont">
+        <h1 className="text-3xl font-semibold text-black">Products</h1>
+        <p className="mt-3 text-sm text-red-600">
+          Failed to load products. Please try again.
+        </p>
+        <pre className="mt-3 overflow-auto text-xs text-gray-500">
+          {JSON.stringify(error, null, 2)}
+        </pre>
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-screen bg-[#f8f8f6] p-4 font-zurixFont sm:p-6 lg:p-8">
@@ -153,61 +157,64 @@ const Product = () => {
       {/* Filters */}
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <div className="relative xl:col-span-2">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              ⌕
-            </span>
-
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search product name..."
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black"
-            />
-          </div>
-
+          {/* Search */}
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search product name..."
+            className="h-11 rounded-lg border border-gray-200 px-3 text-sm outline-none transition focus:border-black"
+          />
+          {/* Category */}
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-black"
+            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
           >
+            <option value="All">All Categories</option>
+
             {categories.map((item) => (
-              <option key={item} value={item}>
-                {item === "All" ? "All Categories" : item}
+              <option key={item.value} value={item.value}>
+                {item.label}
               </option>
             ))}
           </select>
 
+          {/* Colors Dropdown */}
           <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-black"
+            value={colors}
+            onChange={(e) => setColors(e.target.value)}
+            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
           >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            <option value="">All Colors</option>
+            <option value="Red">Red</option>
+            <option value="Green">Green</option>
+            <option value="Blue">Blue</option>
+            <option value="Violet">Violet</option>
+          </select>
+          {/* Sizes Dropdown */}
+          <select
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
+          >
+            <option value="">All Sizes</option>
+            <option value="Small">Small</option>
+            <option value="Medium">Medium</option>
+            <option value="Large">Large</option>
+            <option value="X-Large">X-Large</option>
           </select>
 
+          {/* Sort */}
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-black"
+            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
           >
             <option value="newest">Newest First</option>
             <option value="priceLow">Price: Low to High</option>
             <option value="priceHigh">Price: High to Low</option>
           </select>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 transition hover:border-black hover:text-black"
-          >
-            Reset Filters
-          </button>
         </div>
       </div>
 
@@ -221,7 +228,7 @@ const Product = () => {
                   "#",
                   "Product",
                   "Category",
-                  "Price",
+                  "Original Price",
                   "Sale Price",
                   "Stock",
                   "Status",
@@ -238,98 +245,118 @@ const Product = () => {
             </thead>
 
             <tbody>
-              {filteredProducts.map((product, index) => (
-                <tr
-                  key={product.id}
-                  className="border-b border-gray-100 transition last:border-0 hover:bg-gray-50/70"
-                >
-                  <td className="px-5 py-4 text-sm text-gray-500">
-                    {index + 1}
-                  </td>
+              {products.map((product, index) => {
+                const image = Array.isArray(product.images)
+                  ? product.images[0]
+                  : product.images;
 
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="h-14 w-14 rounded-lg border border-gray-100 bg-gray-50 object-cover"
-                      />
+                const productId = product._id || product.id;
 
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900">
-                          {product.name}
-                        </p>
-                        <p className="mt-1 max-w-xs text-xs leading-5 text-gray-500">
-                          {product.description}
-                        </p>
+                const categoryName =
+                  product.category?.name ||
+                  (typeof product.category === "string"
+                    ? product.category
+                    : "Uncategorized");
+
+                const isActive =
+                  product.status != null
+                    ? String(product.status).toLowerCase() === "active"
+                    : product.isActive !== false;
+
+                return (
+                  <tr
+                    key={productId || index}
+                    className="border-b border-gray-100 transition last:border-0 hover:bg-gray-50/70"
+                  >
+                    <td className="px-5 py-4 text-sm text-gray-500">
+                      {index + 1}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        {image ? (
+                          <img
+                            src={product.images[0]?.url}
+                            alt={product.name || "Product"}
+                            className="h-14 w-14 rounded-lg border border-gray-100 bg-gray-50 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
+                            No image
+                          </div>
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900">
+                            {product.name}
+                          </p>
+                          <p className="mt-1 max-w-xs text-xs leading-5 text-gray-500">
+                            {product.description.slice(0, 100) ||
+                              "No description"}
+                            ...
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="px-5 py-4">
-                    <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700">
-                      {product.category}
-                    </span>
-                  </td>
+                    <td className="px-5 py-4">
+                      <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700">
+                        {categoryName}
+                      </span>
+                    </td>
 
-                  <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-600">
-                    {formatPrice(product.price)}
-                  </td>
+                    <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-600">
+                      {formatPrice(product.price)}
+                    </td>
 
-                  <td className="whitespace-nowrap px-5 py-4 text-sm font-medium text-black">
-                    {formatPrice(product.salePrice)}
-                  </td>
+                    <td className="whitespace-nowrap px-5 py-4 text-sm font-medium text-black">
+                      {formatPrice(product.salePrice ?? product.price)}
+                    </td>
 
-                  <td className="px-5 py-4 text-sm text-gray-600">
-                    {product.stock}
-                  </td>
+                    <td className="px-5 py-4 text-sm text-gray-600">
+                      {product.stock ?? product.quantity ?? 0}
+                    </td>
 
-                  <td className="px-5 py-4">
-                    <span
-                      className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                        product.status === "Active"
-                          ? "bg-green-50 text-green-700"
-                          : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      {product.status}
-                    </span>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        title="View product"
-                        onClick={() => navigate(`/products/${product.id}`)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-black hover:text-black"
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                          isActive
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-600"
+                        }`}
                       >
-                        ↗
-                      </button>
+                        {isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
 
-                      <button
-                        type="button"
-                        title="Edit product"
-                        onClick={() => navigate(`/products/edit/${product.id}`)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-black hover:text-black"
-                      >
-                        ✎
-                      </button>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          title="View product"
+                          onClick={() => navigate(`/products/${productId}`)}
+                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
+                        >
+                          View
+                        </button>
 
-                      <button
-                        type="button"
-                        title="Delete sample product"
-                        onClick={() => handleDelete(product.id)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-500 transition hover:bg-red-50"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <button
+                          type="button"
+                          title="Edit product"
+                          onClick={() =>
+                            navigate(`/products/edit/${productId}`)
+                          }
+                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
-              {filteredProducts.length === 0 && (
+              {products.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-16 text-center">
                     <p className="text-base font-medium text-gray-800">
@@ -355,10 +382,8 @@ const Product = () => {
         {/* Table Footer */}
         <div className="flex flex-col gap-2 border-t border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-gray-500">
-            Showing {filteredProducts.length} of {products.length} products
+            Showing {products.length} products.
           </p>
-
-          <p className="text-xs text-gray-400">ZURIX Store Management</p>
         </div>
       </div>
     </section>
