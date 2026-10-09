@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGetAllProductsQuery } from "../../redux/ProductApi";
-import { FaEye } from "react-icons/fa";
+import { FaEye, FaTrash } from "react-icons/fa";
+import { BsPencilSquare } from "react-icons/bs";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-IN", {
@@ -349,7 +350,18 @@ const Product = () => {
                           }
                           className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
                         >
-                          Edit
+                          <BsPencilSquare />
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Edit product"
+                          onClick={() =>
+                            navigate(`/products/edit/${productId}`)
+                          }
+                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
+                        >
+                          <FaTrash />
                         </button>
                       </div>
                     </td>
