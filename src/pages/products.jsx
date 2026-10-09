@@ -1,7 +1,7 @@
 import React from "react";
 import Product from "../components/Products/Product";
 
-const products = () => {
+const Products = () => {
   return (
     <section>
       <Product />
@@ -9,4 +9,4 @@ const products = () => {
   );
 };
 
-export default products;
+export default Products;
