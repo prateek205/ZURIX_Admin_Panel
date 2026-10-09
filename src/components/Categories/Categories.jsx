@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FaPlus, FaSearch, FaEye, FaTrash } from "react-icons/fa";
 import { BsPencilSquare } from "react-icons/bs";
 import { useGetAllCategoryQuery } from "../../redux/CategoryApi";
-import CategoryModel from "../../components/categories/CategoryModel";
+import CategoryModel from "./CategoryModel";
 
 const Categories = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
