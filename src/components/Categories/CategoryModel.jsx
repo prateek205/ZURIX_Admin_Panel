@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { FaTimes, FaPlus } from "react-icons/fa";
+import { FaTimes, FaPlus, FaImage } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useAddCategoryMutation } from "../../redux/CategoryApi";
 
-const CategoryModel = ({ isOpen, onClose }) => {
-  const [addCategory, { isLoading, isError }] = useAddCategoryMutation();
+const initialForm = {
+  name: "",
+  gender: "",
+  image: "",
+};
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-  });
+const CategoryModel = ({ isOpen, onClose }) => {
+  const [addCategory, { isLoading }] = useAddCategoryMutation();
+  const [formData, setFormData] = useState(initialForm);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,24 +25,20 @@ const CategoryModel = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
-      toast.error("Please enter a category name.");
+    if (!formData.name.trim() || !formData.gender || !formData.image.trim()) {
+      toast.error("Please fill in all fields.");
       return;
     }
 
     try {
       await addCategory({
         name: formData.name.trim(),
-        description: formData.description.trim(),
+        gender: formData.gender,
+        image: formData.image.trim(),
       }).unwrap();
 
       toast.success("Category added successfully!");
-
-      setFormData({
-        name: "",
-        description: "",
-      });
-
+      setFormData(initialForm);
       onClose?.();
     } catch (error) {
       toast.error(error?.data?.message || "Failed to add category.");
@@ -58,7 +56,7 @@ const CategoryModel = ({ isOpen, onClose }) => {
       onClick={onClose}
     >
       <section
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+        className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -68,15 +66,15 @@ const CategoryModel = ({ isOpen, onClose }) => {
               Add Category
             </h2>
             <p className="mt-1 text-xs text-gray-500">
-              Create a new product category.
+              Add a new product category.
             </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-black"
             aria-label="Close modal"
+            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-black"
           >
             <FaTimes />
           </button>
@@ -85,6 +83,7 @@ const CategoryModel = ({ isOpen, onClose }) => {
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="space-y-5 p-5 sm:p-6">
+            {/* Category Name */}
             <div>
               <label
                 htmlFor="categoryName"
@@ -99,37 +98,80 @@ const CategoryModel = ({ isOpen, onClose }) => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Enter category name"
+                placeholder="e.g. Dresses"
                 maxLength={100}
                 required
                 className={inputClass}
               />
             </div>
 
+            {/* Gender */}
             <div>
               <label
-                htmlFor="categoryDescription"
+                htmlFor="categoryGender"
                 className="text-sm font-medium text-gray-700"
               >
-                Description
+                Gender *
               </label>
 
-              <textarea
-                id="categoryDescription"
-                name="description"
-                value={formData.description}
+              <select
+                id="categoryGender"
+                name="gender"
+                value={formData.gender}
                 onChange={handleChange}
-                placeholder="Enter category description"
-                rows={4}
-                className={inputClass}
-              />
+                required
+                className={`${inputClass} bg-white`}
+              >
+                <option value="">Select Gender</option>
+                <option value="womens">Women's</option>
+                <option value="mens">Men's</option>
+                <option value="unisex">Unisex</option>
+              </select>
             </div>
 
-            {isError && (
-              <p className="text-sm text-red-600">
-                Unable to add category. Please try again.
-              </p>
-            )}
+            {/* Image URL */}
+            <div>
+              <label
+                htmlFor="categoryImage"
+                className="text-sm font-medium text-gray-700"
+              >
+                Image URL *
+              </label>
+
+              <div className="relative mt-1">
+                <FaImage className="absolute left-3 top-3.5 text-gray-400" />
+
+                <input
+                  id="categoryImage"
+                  type="url"
+                  name="image"
+                  value={formData.image}
+                  onChange={handleChange}
+                  placeholder="https://example.com/category.jpg"
+                  required
+                  className={`${inputClass} mt-0 pl-9`}
+                />
+              </div>
+
+              {/* Image Preview */}
+              {formData.image.trim() && (
+                <div className="mt-3">
+                  <p className="mb-2 text-xs text-gray-500">Image Preview</p>
+
+                  <img
+                    src={formData.image}
+                    alt="Category preview"
+                    className="h-36 w-full rounded-lg border border-gray-200 bg-gray-50 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                    onLoad={(e) => {
+                      e.currentTarget.style.display = "block";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer */}
