@@ -1,8 +1,14 @@
 import React from 'react'
+import { useGetAllOrdersQuery } from '../../redux/OrdersApi'
 
 const Orders = () => {
+
+    const {data:getAllOrders, isLoading, isError} = useGetAllOrdersQuery()
+
+    console.log("ORDERS_DATA:", getAllOrders)
+
   return (
-    <div>Order</div>
+    <section>Order</section>
   )
 }
 
