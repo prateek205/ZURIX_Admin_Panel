@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { useAdminProfileQuery } from "../redux/AdminApi";
+import { useAdminProfileQuery } from "../../redux/AdminApi";
+
 
 const Dash = () => {
   const { data: adminProfile, isLoading, isError } = useAdminProfileQuery();
