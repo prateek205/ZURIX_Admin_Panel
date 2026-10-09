@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  useAddProductMutation,
   useGetAllProductsQuery,
   useUpdateProductMutation,
 } from "../../redux/ProductApi";
 import { FaEye, FaTrash } from "react-icons/fa";
 import { BsPencilSquare } from "react-icons/bs";
 import ProductModal from "./ProductModel";
+import ProductCreateModal from "./CreateProductModel";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-IN", {
@@ -41,6 +43,25 @@ const Product = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
+  };
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const [addProduct, { isLoading: isAddingProduct }] = useAddProductMutation();
+
+  const handleAddProduct = async (formData) => {
+    try {
+      await addProduct(formData).unwrap();
+
+      toast.success("Product added successfully!");
+      setIsAddModalOpen(false);
+
+      return true;
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to add product.");
+
+      return false;
+    }
   };
 
   const [updateProduct, { isLoading: isUpdatingProduct }] =
@@ -186,7 +207,7 @@ const Product = () => {
 
         <button
           type="button"
-          onClick={() => navigate("/products/add")}
+          onClick={() => setIsAddModalOpen(true)}
           className="inline-flex h-11 items-center justify-center gap-2 self-start rounded-lg bg-black px-5 text-sm font-medium text-white transition hover:bg-gray-800"
         >
           <span className="text-lg">+</span>
@@ -444,6 +465,12 @@ const Product = () => {
         onClose={handleCloseModal}
         onSave={handleSaveProduct}
         isSaving={isUpdatingProduct}
+      />
+      <ProductCreateModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleAddProduct}
+        isSaving={isAddingProduct}
       />
     </section>
   );
