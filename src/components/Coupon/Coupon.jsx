@@ -11,29 +11,30 @@ import {
 
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
 import { useGetAllCouponsQuery } from "../../redux/Coupon";
+import CouponModel from "./CouponModel";
 
 const Coupon = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
+
   const [coupons, setCoupons] = useState([]);
 
   const { data: getAllCoupons, isLoading, isError } = useGetAllCouponsQuery();
 
-  // Update the UI whenever the API response changes
   useEffect(() => {
-    if (getAllCoupons) {
-      const apiCoupons = Array.isArray(getAllCoupons.data)
-        ? getAllCoupons.data
-        : Array.isArray(getAllCoupons.coupons)
-          ? getAllCoupons.coupons
-          : Array.isArray(getAllCoupons)
-            ? getAllCoupons
-            : [];
+    if (!getAllCoupons) return;
 
-      setCoupons(apiCoupons);
-    }
+    const apiCoupons = Array.isArray(getAllCoupons.data)
+      ? getAllCoupons.data
+      : Array.isArray(getAllCoupons.coupons)
+        ? getAllCoupons.coupons
+        : Array.isArray(getAllCoupons)
+          ? getAllCoupons
+          : [];
+
+    setCoupons(apiCoupons);
   }, [getAllCoupons]);
 
   const [formData, setFormData] = useState({
@@ -794,6 +795,14 @@ const Coupon = () => {
           </div>
         </div>
       )}
+      <CouponModel
+        isOpen={Boolean(selectedCoupon) && !showModal}
+        coupon={selectedCoupon}
+        onClose={() => setSelectedCoupon(null)}
+        onEdit={(coupon) => openEditModal(coupon)}
+        formatPrice={formatPrice}
+        formatDate={formatDate}
+      />
     </section>
   );
 };
