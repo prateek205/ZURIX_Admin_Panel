@@ -1,12 +1,15 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   useAddProductMutation,
   useGetAllProductsQuery,
   useUpdateProductMutation,
+  useDeleteProductMutation,
 } from "../../redux/ProductApi";
+
 import { FaEye, FaTrash } from "react-icons/fa";
 import { BsPencilSquare } from "react-icons/bs";
+import { toast } from "react-toastify";
+
 import ProductModal from "./ProductModel";
 import ProductCreateModal from "./CreateProductModel";
 
@@ -18,8 +21,6 @@ const formatPrice = (price) =>
   }).format(Number(price) || 0);
 
 const Product = () => {
-  const navigate = useNavigate();
-
   // Filter states
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
@@ -30,25 +31,37 @@ const Product = () => {
   const [colors, setColors] = useState("");
   const [size, setSize] = useState("");
 
+  // View/Edit modal states
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalMode, setModalMode] = useState("view");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Add product modal state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // RTK Query mutations
+  const [addProduct, { isLoading: isAddingProduct }] = useAddProductMutation();
+
+  const [updateProduct, { isLoading: isUpdatingProduct }] =
+    useUpdateProductMutation();
+
+  const [deleteProduct, { isLoading: isDeletingProduct }] =
+    useDeleteProductMutation();
+
+  // Open View/Edit modal
   const handleOpenModal = (product, mode) => {
     setSelectedProduct(product);
     setModalMode(mode);
     setIsModalOpen(true);
   };
 
+  // Close View/Edit modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
   };
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  const [addProduct, { isLoading: isAddingProduct }] = useAddProductMutation();
-
+  // Add product API
   const handleAddProduct = async (formData) => {
     try {
       await addProduct(formData).unwrap();
@@ -64,22 +77,51 @@ const Product = () => {
     }
   };
 
-  const [updateProduct, { isLoading: isUpdatingProduct }] =
-    useUpdateProductMutation();
-
+  // Update product API
   const handleSaveProduct = async (updatedData) => {
     try {
       const productId = selectedProduct?._id || selectedProduct?.id;
 
+      if (!productId) {
+        toast.error("Product ID not found.");
+        return false;
+      }
+
       await updateProduct({
         id: productId,
-        ...updatedData,
+        newData: updatedData,
       }).unwrap();
 
       toast.success("Product updated successfully!");
       handleCloseModal();
+
+      return true;
     } catch (error) {
       toast.error(error?.data?.message || "Failed to update product.");
+
+      return false;
+    }
+  };
+
+  // Delete product API
+  const handleDeleteProduct = async (productId) => {
+    if (!productId) {
+      toast.error("Product ID not found.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this product?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProduct(productId).unwrap();
+
+      toast.success("Product deleted successfully!");
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to delete product.");
     }
   };
 
@@ -116,7 +158,7 @@ const Product = () => {
         ? getAllProducts.products
         : [];
 
-  // Dynamic categories from API products
+  // Dynamic categories from products
   const categories = [
     ...new Map(
       products
@@ -165,6 +207,7 @@ const Product = () => {
     setSize("");
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <section className="min-h-screen bg-[#f8f8f6] p-6 font-zurixFont">
@@ -173,13 +216,16 @@ const Product = () => {
     );
   }
 
+  // Error state
   if (isError) {
     return (
       <section className="min-h-screen bg-[#f8f8f6] p-6 font-zurixFont">
         <h1 className="text-3xl font-semibold text-black">Products</h1>
+
         <p className="mt-3 text-sm text-red-600">
           Failed to load products. Please try again.
         </p>
+
         <pre className="mt-3 overflow-auto text-xs text-gray-500">
           {JSON.stringify(error, null, 2)}
         </pre>
@@ -226,6 +272,7 @@ const Product = () => {
             placeholder="Search product name..."
             className="h-11 rounded-lg border border-gray-200 px-3 text-sm outline-none transition focus:border-black"
           />
+
           {/* Category */}
           <select
             value={category}
@@ -241,7 +288,7 @@ const Product = () => {
             ))}
           </select>
 
-          {/* Colors Dropdown */}
+          {/* Colors */}
           <select
             value={colors}
             onChange={(e) => setColors(e.target.value)}
@@ -253,7 +300,8 @@ const Product = () => {
             <option value="Blue">Blue</option>
             <option value="Violet">Violet</option>
           </select>
-          {/* Sizes Dropdown */}
+
+          {/* Sizes */}
           <select
             value={size}
             onChange={(e) => setSize(e.target.value)}
@@ -329,15 +377,17 @@ const Product = () => {
                     key={productId || index}
                     className="border-b border-gray-100 transition last:border-0 hover:bg-gray-50/70"
                   >
+                    {/* Index */}
                     <td className="px-5 py-4 text-sm text-gray-500">
                       {index + 1}
                     </td>
 
+                    {/* Product Details */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         {image ? (
                           <img
-                            src={product.images[0]?.url}
+                            src={typeof image === "string" ? image : image.url}
                             alt={product.name || "Product"}
                             className="h-14 w-14 rounded-lg border border-gray-100 bg-gray-50 object-cover"
                           />
@@ -351,33 +401,39 @@ const Product = () => {
                           <p className="font-medium text-gray-900">
                             {product.name}
                           </p>
+
                           <p className="mt-1 max-w-xs text-xs leading-5 text-gray-500">
-                            {product.description.slice(0, 100) ||
-                              "No description"}
-                            ...
+                            {product.description
+                              ? `${product.description.slice(0, 100)}...`
+                              : "No description"}
                           </p>
                         </div>
                       </div>
                     </td>
 
+                    {/* Category */}
                     <td className="px-5 py-4">
                       <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700">
                         {categoryName}
                       </span>
                     </td>
 
+                    {/* Original Price */}
                     <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-600">
                       {formatPrice(product.price)}
                     </td>
 
+                    {/* Sale Price */}
                     <td className="whitespace-nowrap px-5 py-4 text-sm font-medium text-black">
                       {formatPrice(product.salePrice ?? product.price)}
                     </td>
 
+                    {/* Stock */}
                     <td className="px-5 py-4 text-sm text-gray-600">
                       {product.stock ?? product.quantity ?? 0}
                     </td>
 
+                    {/* Status */}
                     <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-1.5 text-xs font-medium ${
@@ -390,8 +446,10 @@ const Product = () => {
                       </span>
                     </td>
 
+                    {/* Actions */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
+                        {/* View Product */}
                         <button
                           type="button"
                           title="View product"
@@ -411,13 +469,13 @@ const Product = () => {
                           <BsPencilSquare />
                         </button>
 
+                        {/* Delete Product */}
                         <button
                           type="button"
-                          title="Edit product"
-                          onClick={() =>
-                            navigate(`/products/edit/${productId}`)
-                          }
-                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition hover:border-black hover:text-black"
+                          title="Delete product"
+                          disabled={isDeletingProduct}
+                          onClick={() => handleDeleteProduct(productId)}
+                          className="flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm text-red-600 transition hover:border-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <FaTrash />
                         </button>
@@ -427,15 +485,18 @@ const Product = () => {
                 );
               })}
 
+              {/* Empty State */}
               {products.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-16 text-center">
                     <p className="text-base font-medium text-gray-800">
                       No products found
                     </p>
+
                     <p className="mt-2 text-sm text-gray-500">
                       Try changing your search or filters.
                     </p>
+
                     <button
                       type="button"
                       onClick={handleReset}
@@ -455,9 +516,14 @@ const Product = () => {
           <p className="text-xs text-gray-500">
             Showing {products.length} products.
           </p>
+
+          {isFetching && (
+            <p className="text-xs text-gray-500">Updating product list...</p>
+          )}
         </div>
       </div>
 
+      {/* View/Edit Product Modal */}
       <ProductModal
         product={selectedProduct}
         isOpen={isModalOpen}
@@ -466,6 +532,8 @@ const Product = () => {
         onSave={handleSaveProduct}
         isSaving={isUpdatingProduct}
       />
+
+      {/* Add Product Modal */}
       <ProductCreateModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
