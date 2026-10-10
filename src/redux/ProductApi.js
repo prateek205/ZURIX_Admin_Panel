@@ -3,16 +3,7 @@ import { baseApi } from "./BaseApi";
 const productApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAllProducts: builder.query({
-      query: ({
-        search,
-        filter,
-        category,
-        maxPrice,
-        minPrice,
-        sort,
-        colors,
-        size,
-      } = {}) => ({
+      query: ({ search, filter, category, maxPrice, minPrice, sort } = {}) => ({
         url: "/products/getAllProducts",
         method: "GET",
         params: {
@@ -22,8 +13,6 @@ const productApi = baseApi.injectEndpoints({
           maxPrice,
           minPrice,
           sort,
-          colors: Array.isArray(colors) ? colors.join(",") : colors,
-          size: Array.isArray(size) ? size.join(",") : size,
         },
       }),
       providesTags: ["Products"],
@@ -47,7 +36,7 @@ const productApi = baseApi.injectEndpoints({
     }),
 
     updateProduct: builder.mutation({
-      query: ({id, newData}) => ({
+      query: ({ id, newData }) => ({
         url: `/products/updateProductById/${id}`,
         method: "PUT",
         body: newData,

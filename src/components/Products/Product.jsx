@@ -133,20 +133,13 @@ const Product = () => {
     isError,
     error,
   } = useGetAllProductsQuery({
-    search,
-    filter,
-    category: category === "All" ? "" : category,
+    sort,
     minPrice,
     maxPrice,
-    sort,
-    colors: colors
-      .split(",")
-      .map((color) => color.trim())
-      .filter(Boolean),
-    size: size
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
+    category: category === "All" ? "" : category,
+    colors,
+    size,
+    search,
   });
 
   // Extract products from API response
@@ -263,7 +256,7 @@ const Product = () => {
 
       {/* Filters */}
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {/* Search */}
           <input
             type="search"
@@ -288,32 +281,6 @@ const Product = () => {
             ))}
           </select>
 
-          {/* Colors */}
-          <select
-            value={colors}
-            onChange={(e) => setColors(e.target.value)}
-            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
-          >
-            <option value="">All Colors</option>
-            <option value="Red">Red</option>
-            <option value="Green">Green</option>
-            <option value="Blue">Blue</option>
-            <option value="Violet">Violet</option>
-          </select>
-
-          {/* Sizes */}
-          <select
-            value={size}
-            onChange={(e) => setSize(e.target.value)}
-            className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
-          >
-            <option value="">All Sizes</option>
-            <option value="Small">Small</option>
-            <option value="Medium">Medium</option>
-            <option value="Large">Large</option>
-            <option value="X-Large">X-Large</option>
-          </select>
-
           {/* Sort */}
           <select
             value={sort}
@@ -321,8 +288,8 @@ const Product = () => {
             className="h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-black"
           >
             <option value="newest">Newest First</option>
-            <option value="priceLow">Price: Low to High</option>
-            <option value="priceHigh">Price: High to Low</option>
+            <option value="maxPrice">Price: Low to High</option>
+            <option value="minPrice">Price: High to Low</option>
           </select>
         </div>
       </div>
