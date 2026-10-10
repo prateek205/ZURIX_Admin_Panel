@@ -10,7 +10,13 @@ import {
 } from "react-icons/bi";
 
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
-import { useGetAllCouponsQuery } from "../../redux/Coupon";
+
+import {
+  useGetAllCouponsQuery,
+  useAddCouponsMutation,
+} from "../../redux/Coupon";
+
+import { toast } from "react-toastify";
 import CouponModel from "./CouponModel";
 
 const Coupon = () => {
@@ -18,11 +24,15 @@ const Coupon = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
-
   const [coupons, setCoupons] = useState([]);
 
+  // Get coupons API
   const { data: getAllCoupons, isLoading, isError } = useGetAllCouponsQuery();
 
+  // Create coupon API
+  const [addCoupons, { isLoading: isAddingCoupon }] = useAddCouponsMutation();
+
+  // Store API coupons in state
   useEffect(() => {
     if (!getAllCoupons) return;
 
@@ -37,6 +47,7 @@ const Coupon = () => {
     setCoupons(apiCoupons);
   }, [getAllCoupons]);
 
+  // Form state
   const [formData, setFormData] = useState({
     code: "",
     discountType: "PERCENTAGE",
@@ -49,6 +60,7 @@ const Coupon = () => {
     isActive: true,
   });
 
+  // Format price
   const formatPrice = (amount) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -56,6 +68,7 @@ const Coupon = () => {
       maximumFractionDigits: 0,
     }).format(Number(amount) || 0);
 
+  // Format date
   const formatDate = (date) => {
     if (!date) return "—";
 
@@ -70,6 +83,7 @@ const Coupon = () => {
     });
   };
 
+  // Check expiry
   const isExpired = (coupon) =>
     coupon.expireDate &&
     new Date(coupon.expireDate).getTime() < new Date().setHours(0, 0, 0, 0);
@@ -90,7 +104,7 @@ const Coupon = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Statistics from API data
+  // Statistics
   const activeCount = coupons.filter(
     (coupon) => coupon.isActive && !isExpired(coupon),
   ).length;
@@ -129,6 +143,7 @@ const Coupon = () => {
     },
   ];
 
+  // Reset form
   const resetForm = () => {
     setFormData({
       code: "",
@@ -143,12 +158,14 @@ const Coupon = () => {
     });
   };
 
+  // Open create modal
   const openCreateModal = () => {
     setSelectedCoupon(null);
     resetForm();
     setShowModal(true);
   };
 
+  // Open edit modal
   const openEditModal = (coupon) => {
     setSelectedCoupon(coupon);
 
@@ -167,6 +184,7 @@ const Coupon = () => {
     setShowModal(true);
   };
 
+  // Handle form changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -176,51 +194,63 @@ const Coupon = () => {
     }));
   };
 
-  // Local preview only. Connect create/update mutations to persist changes.
-  const handleSubmit = (e) => {
+  // Create coupon API integration
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const payload = {
-      ...formData,
       code: formData.code.trim().toUpperCase(),
+      discountType: formData.discountType,
       discountValue: Number(formData.discountValue),
       minOrderAmount: Number(formData.minOrderAmount),
       maxDiscount:
         formData.discountType === "PERCENTAGE"
           ? Number(formData.maxDiscount)
           : Number(formData.discountValue),
+      startDate: formData.startDate,
+      expireDate: formData.expireDate,
       usageLimit: Number(formData.usageLimit),
-      usedCount: selectedCoupon?.usedCount || 0,
+      isActive: Boolean(formData.isActive),
     };
 
-    if (selectedCoupon) {
-      setCoupons((prev) =>
-        prev.map((coupon) =>
-          coupon._id === selectedCoupon._id
-            ? { ...coupon, ...payload }
-            : coupon,
-        ),
-      );
-    } else {
-      setCoupons((prev) => [
-        ...prev,
-        { ...payload, _id: `local-${Date.now()}` },
-      ]);
-    }
+    try {
+      if (selectedCoupon) {
+        // Update API has not been connected yet.
+        toast.info("Update coupon API is not connected yet.");
+        return;
+      }
 
-    setShowModal(false);
-    setSelectedCoupon(null);
+      await addCoupons(payload).unwrap();
+
+      toast.success("Coupon created successfully!");
+
+      setShowModal(false);
+      setSelectedCoupon(null);
+      resetForm();
+
+      // The GET query refreshes because the mutation
+      // invalidates the Coupon cache tag.
+    } catch (error) {
+      console.error("CREATE COUPON ERROR:", error);
+
+      toast.error(
+        error?.data?.message || error?.message || "Failed to create coupon.",
+      );
+    }
   };
 
-  // Local preview only. Connect a delete mutation to persist deletion.
+  // Delete is local only until a delete API is connected.
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this coupon?")) {
       return;
     }
 
     setCoupons((prev) => prev.filter((coupon) => coupon._id !== id));
+
+    toast.info("Coupon removed from the current UI only.");
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <section className="min-h-screen bg-gray-50 p-8">
@@ -234,14 +264,17 @@ const Coupon = () => {
     );
   }
 
+  // Error state
   if (isError) {
     return (
       <section className="min-h-screen bg-gray-50 p-6">
         <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
           <BiSolidCoupon size={34} className="mx-auto mb-3 text-red-400" />
+
           <h2 className="text-lg font-semibold text-gray-900">
             Failed to load coupons
           </h2>
+
           <p className="mt-2 text-sm text-gray-500">
             Check the API response and try again.
           </p>
@@ -256,6 +289,7 @@ const Coupon = () => {
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Coupons</h1>
+
           <p className="mt-1 text-sm text-gray-500">
             Create and manage discount coupons for your store.
           </p>
@@ -284,10 +318,12 @@ const Coupon = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">{stat.title}</p>
+
                   <h2 className="mt-2 text-2xl font-bold text-gray-900">
                     {stat.value}
                   </h2>
                 </div>
+
                 <div className={`rounded-lg p-3 ${stat.color}`}>
                   <Icon size={22} />
                 </div>
@@ -302,6 +338,7 @@ const Coupon = () => {
         <div className="flex flex-col gap-4 border-b border-gray-200 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">All Coupons</h2>
+
             <p className="mt-1 text-sm text-gray-500">
               Manage discount codes and redemption limits.
             </p>
@@ -313,6 +350,7 @@ const Coupon = () => {
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
+
               <input
                 type="text"
                 value={searchTerm}
@@ -361,10 +399,12 @@ const Coupon = () => {
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
                           <BiSolidCoupon size={21} />
                         </div>
+
                         <div>
                           <p className="font-bold tracking-wide text-gray-900">
                             {coupon.code}
                           </p>
+
                           <p className="mt-1 text-xs text-gray-500">
                             {coupon.discountType === "PERCENTAGE"
                               ? "Percentage discount"
@@ -392,6 +432,7 @@ const Coupon = () => {
 
                     <td className="px-5 py-4 text-gray-600">
                       <p>{formatDate(coupon.startDate)}</p>
+
                       <p className="mt-1 text-xs text-gray-400">
                         to {formatDate(coupon.expireDate)}
                       </p>
@@ -401,6 +442,7 @@ const Coupon = () => {
                       <p className="font-medium text-gray-900">
                         {usedCount} / {usageLimit}
                       </p>
+
                       <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-gray-100">
                         <div
                           className="h-full rounded-full bg-violet-500"
@@ -475,9 +517,11 @@ const Coupon = () => {
                       size={32}
                       className="mx-auto mb-3 text-gray-300"
                     />
+
                     <p className="font-medium text-gray-700">
                       No coupons found
                     </p>
+
                     <p className="mt-1 text-sm">
                       Try another search or create a new coupon.
                     </p>
@@ -501,7 +545,7 @@ const Coupon = () => {
         </div>
       </div>
 
-      {/* Create / Edit Coupon Modal */}
+      {/* Create Coupon Form */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -518,13 +562,18 @@ const Coupon = () => {
                 <h2 className="text-xl font-bold text-gray-900">
                   {selectedCoupon ? "Edit Coupon" : "Create Coupon"}
                 </h2>
+
                 <p className="mt-1 text-sm text-gray-500">
                   Configure discount and coupon validity.
                 </p>
               </div>
+
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedCoupon(null);
+                }}
                 className="rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
               >
                 ✕
@@ -537,6 +586,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Coupon Code *
                   </label>
+
                   <input
                     name="code"
                     value={formData.code}
@@ -551,6 +601,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Discount Type *
                   </label>
+
                   <select
                     name="discountType"
                     value={formData.discountType}
@@ -566,6 +617,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Discount Value *
                   </label>
+
                   <input
                     type="number"
                     name="discountValue"
@@ -584,6 +636,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Minimum Order Amount (₹) *
                   </label>
+
                   <input
                     type="number"
                     name="minOrderAmount"
@@ -600,6 +653,7 @@ const Coupon = () => {
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Maximum Discount (₹) *
                     </label>
+
                     <input
                       type="number"
                       name="maxDiscount"
@@ -616,6 +670,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Usage Limit *
                   </label>
+
                   <input
                     type="number"
                     name="usageLimit"
@@ -631,6 +686,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Start Date *
                   </label>
+
                   <input
                     type="date"
                     name="startDate"
@@ -645,6 +701,7 @@ const Coupon = () => {
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Expiry Date *
                   </label>
+
                   <input
                     type="date"
                     name="expireDate"
@@ -665,10 +722,12 @@ const Coupon = () => {
                   onChange={handleChange}
                   className="h-4 w-4 accent-black"
                 />
+
                 <span>
                   <span className="block text-sm font-medium text-gray-800">
                     Activate coupon
                   </span>
+
                   <span className="mt-1 block text-xs text-gray-500">
                     Allow customers to use this coupon when valid.
                   </span>
@@ -678,16 +737,25 @@ const Coupon = () => {
               <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setSelectedCoupon(null);
+                  }}
                   className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+                  disabled={isAddingCoupon}
+                  className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {selectedCoupon ? "Save Changes" : "Create Coupon"}
+                  {isAddingCoupon
+                    ? "Creating..."
+                    : selectedCoupon
+                      ? "Save Changes"
+                      : "Create Coupon"}
                 </button>
               </div>
             </form>
@@ -695,111 +763,12 @@ const Coupon = () => {
         </div>
       )}
 
-      {/* View Coupon Modal */}
-      {selectedCoupon && !showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setSelectedCoupon(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                Coupon Details
-              </h2>
-              <button
-                type="button"
-                onClick={() => setSelectedCoupon(null)}
-                className="rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-5 rounded-xl bg-violet-50 p-5 text-center">
-              <BiSolidCoupon
-                size={32}
-                className="mx-auto mb-2 text-violet-600"
-              />
-              <h3 className="text-xl font-bold tracking-wider text-gray-900">
-                {selectedCoupon.code}
-              </h3>
-              <p className="mt-2 text-sm text-gray-600">
-                {selectedCoupon.discountType === "PERCENTAGE"
-                  ? `${selectedCoupon.discountValue}% off`
-                  : `${formatPrice(selectedCoupon.discountValue)} off`}
-              </p>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Minimum Order</span>
-                <span className="font-medium text-gray-900">
-                  {formatPrice(selectedCoupon.minOrderAmount)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Maximum Discount</span>
-                <span className="font-medium text-gray-900">
-                  {formatPrice(selectedCoupon.maxDiscount)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Start Date</span>
-                <span className="font-medium text-gray-900">
-                  {formatDate(selectedCoupon.startDate)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Expiry Date</span>
-                <span className="font-medium text-gray-900">
-                  {formatDate(selectedCoupon.expireDate)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Usage</span>
-                <span className="font-medium text-gray-900">
-                  {selectedCoupon.usedCount ?? 0} /{" "}
-                  {selectedCoupon.usageLimit ?? 0}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Status</span>
-                <span
-                  className={`font-medium ${
-                    selectedCoupon.isActive && !isExpired(selectedCoupon)
-                      ? "text-green-600"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {isExpired(selectedCoupon)
-                    ? "Expired"
-                    : selectedCoupon.isActive
-                      ? "Active"
-                      : "Inactive"}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSelectedCoupon(null)}
-              className="mt-6 w-full rounded-lg bg-gray-900 py-3 text-sm font-medium text-white hover:bg-gray-700"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Separate Coupon Details Model */}
       <CouponModel
         isOpen={Boolean(selectedCoupon) && !showModal}
         coupon={selectedCoupon}
         onClose={() => setSelectedCoupon(null)}
-        onEdit={(coupon) => openEditModal(coupon)}
+        onEdit={openEditModal}
         formatPrice={formatPrice}
         formatDate={formatDate}
       />
