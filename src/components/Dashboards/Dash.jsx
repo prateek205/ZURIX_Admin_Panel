@@ -1,11 +1,12 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAdminProfileQuery } from "../../redux/AdminApi";
-
 
 const Dash = () => {
   const { data: adminProfile, isLoading, isError } = useAdminProfileQuery();
 
   console.log("ADMIN_PROFILE:", adminProfile);
+
+  const navigate = useNavigate()
 
   const cards = [
     {
