@@ -8,6 +8,7 @@ import Products from "./pages/products";
 import Category from "./pages/category";
 import Order from "./pages/order";
 import Customer from "./pages/customer";
+import Coupen from "./pages/coupen";
 
 const App = () => {
   return (
@@ -34,6 +35,7 @@ const App = () => {
           <Route path="/categories" element={<Category />} />
           <Route path="/orders" element={<Order />} />
           <Route path="/customers" element={<Customer />} />
+          <Route path="/coupons" element={<Coupen />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
