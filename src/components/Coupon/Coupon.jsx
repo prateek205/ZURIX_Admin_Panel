@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
 import {
   BiSearch,
   BiSolidCoupon,
@@ -7,55 +8,33 @@ import {
   BiPlus,
   BiCalendar,
 } from "react-icons/bi";
+
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
+import { useGetAllCouponsQuery } from "../../redux/Coupon";
 
 const Coupon = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [coupons, setCoupons] = useState([]);
 
-  const [coupons, setCoupons] = useState([
-    {
-      _id: "1",
-      code: "WELCOME10",
-      discountType: "PERCENTAGE",
-      discountValue: 10,
-      minOrderAmount: 1000,
-      maxDiscount: 500,
-      startDate: "2026-10-07",
-      expireDate: "2027-02-07",
-      usageLimit: 100,
-      usedCount: 1,
-      isActive: true,
-    },
-    {
-      _id: "2",
-      code: "SAVE200",
-      discountType: "FIXED",
-      discountValue: 200,
-      minOrderAmount: 1500,
-      maxDiscount: 200,
-      startDate: "2026-10-01",
-      expireDate: "2026-12-31",
-      usageLimit: 200,
-      usedCount: 45,
-      isActive: true,
-    },
-    {
-      _id: "3",
-      code: "FESTIVE15",
-      discountType: "PERCENTAGE",
-      discountValue: 15,
-      minOrderAmount: 2000,
-      maxDiscount: 700,
-      startDate: "2026-09-01",
-      expireDate: "2026-10-01",
-      usageLimit: 100,
-      usedCount: 72,
-      isActive: false,
-    },
-  ]);
+  const { data: getAllCoupons, isLoading, isError } = useGetAllCouponsQuery();
+
+  // Update the UI whenever the API response changes
+  useEffect(() => {
+    if (getAllCoupons) {
+      const apiCoupons = Array.isArray(getAllCoupons.data)
+        ? getAllCoupons.data
+        : Array.isArray(getAllCoupons.coupons)
+          ? getAllCoupons.coupons
+          : Array.isArray(getAllCoupons)
+            ? getAllCoupons
+            : [];
+
+      setCoupons(apiCoupons);
+    }
+  }, [getAllCoupons]);
 
   const [formData, setFormData] = useState({
     code: "",
@@ -79,35 +58,77 @@ const Coupon = () => {
   const formatDate = (date) => {
     if (!date) return "—";
 
-    return new Date(date).toLocaleDateString("en-IN", {
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) return "—";
+
+    return parsedDate.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
 
+  const isExpired = (coupon) =>
+    coupon.expireDate &&
+    new Date(coupon.expireDate).getTime() < new Date().setHours(0, 0, 0, 0);
+
+  // Search and status filter
   const filteredCoupons = coupons.filter((coupon) => {
-    const matchesSearch = coupon.code
+    const matchesSearch = (coupon.code || "")
       .toLowerCase()
       .includes(searchTerm.trim().toLowerCase());
 
+    const active = Boolean(coupon.isActive) && !isExpired(coupon);
+
     const matchesStatus =
       statusFilter === "All" ||
-      (statusFilter === "Active" && coupon.isActive) ||
-      (statusFilter === "Inactive" && !coupon.isActive);
+      (statusFilter === "Active" && active) ||
+      (statusFilter === "Inactive" && !active);
 
     return matchesSearch && matchesStatus;
   });
 
-  const activeCount = coupons.filter((coupon) => coupon.isActive).length;
+  // Statistics from API data
+  const activeCount = coupons.filter(
+    (coupon) => coupon.isActive && !isExpired(coupon),
+  ).length;
+
   const inactiveCount = coupons.length - activeCount;
+
   const totalUses = coupons.reduce(
     (total, coupon) => total + Number(coupon.usedCount || 0),
     0,
   );
 
-  const openCreateModal = () => {
-    setSelectedCoupon(null);
+  const stats = [
+    {
+      title: "Total Coupons",
+      value: getAllCoupons?.count ?? coupons.length,
+      icon: BiSolidCoupon,
+      color: "bg-blue-50 text-blue-600",
+    },
+    {
+      title: "Active Coupons",
+      value: activeCount,
+      icon: BiCheckCircle,
+      color: "bg-green-50 text-green-600",
+    },
+    {
+      title: "Inactive / Expired",
+      value: inactiveCount,
+      icon: BiXCircle,
+      color: "bg-red-50 text-red-600",
+    },
+    {
+      title: "Total Redemptions",
+      value: totalUses,
+      icon: BiCalendar,
+      color: "bg-violet-50 text-violet-600",
+    },
+  ];
+
+  const resetForm = () => {
     setFormData({
       code: "",
       discountType: "PERCENTAGE",
@@ -119,22 +140,29 @@ const Coupon = () => {
       usageLimit: "",
       isActive: true,
     });
+  };
+
+  const openCreateModal = () => {
+    setSelectedCoupon(null);
+    resetForm();
     setShowModal(true);
   };
 
   const openEditModal = (coupon) => {
     setSelectedCoupon(coupon);
+
     setFormData({
-      code: coupon.code,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-      minOrderAmount: coupon.minOrderAmount,
-      maxDiscount: coupon.maxDiscount,
+      code: coupon.code || "",
+      discountType: coupon.discountType || "PERCENTAGE",
+      discountValue: coupon.discountValue ?? "",
+      minOrderAmount: coupon.minOrderAmount ?? "",
+      maxDiscount: coupon.maxDiscount ?? "",
       startDate: coupon.startDate?.slice(0, 10) || "",
       expireDate: coupon.expireDate?.slice(0, 10) || "",
-      usageLimit: coupon.usageLimit,
-      isActive: coupon.isActive,
+      usageLimit: coupon.usageLimit ?? "",
+      isActive: Boolean(coupon.isActive),
     });
+
     setShowModal(true);
   };
 
@@ -147,6 +175,7 @@ const Coupon = () => {
     }));
   };
 
+  // Local preview only. Connect create/update mutations to persist changes.
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -172,45 +201,53 @@ const Coupon = () => {
         ),
       );
     } else {
-      setCoupons((prev) => [...prev, { ...payload, _id: String(Date.now()) }]);
+      setCoupons((prev) => [
+        ...prev,
+        { ...payload, _id: `local-${Date.now()}` },
+      ]);
     }
 
     setShowModal(false);
     setSelectedCoupon(null);
   };
 
+  // Local preview only. Connect a delete mutation to persist deletion.
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this coupon?")) {
-      setCoupons((prev) => prev.filter((coupon) => coupon._id !== id));
+    if (!window.confirm("Are you sure you want to delete this coupon?")) {
+      return;
     }
+
+    setCoupons((prev) => prev.filter((coupon) => coupon._id !== id));
   };
 
-  const stats = [
-    {
-      title: "Total Coupons",
-      value: coupons.length,
-      icon: BiSolidCoupon,
-      color: "bg-blue-50 text-blue-600",
-    },
-    {
-      title: "Active Coupons",
-      value: activeCount,
-      icon: BiCheckCircle,
-      color: "bg-green-50 text-green-600",
-    },
-    {
-      title: "Inactive Coupons",
-      value: inactiveCount,
-      icon: BiXCircle,
-      color: "bg-red-50 text-red-600",
-    },
-    {
-      title: "Total Redemptions",
-      value: totalUses,
-      icon: BiCalendar,
-      color: "bg-violet-50 text-violet-600",
-    },
-  ];
+  if (isLoading) {
+    return (
+      <section className="min-h-screen bg-gray-50 p-8">
+        <div className="flex min-h-64 items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+            <p className="text-sm text-gray-500">Loading coupons...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <section className="min-h-screen bg-gray-50 p-6">
+        <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
+          <BiSolidCoupon size={34} className="mx-auto mb-3 text-red-400" />
+          <h2 className="text-lg font-semibold text-gray-900">
+            Failed to load coupons
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Check the API response and try again.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -250,7 +287,6 @@ const Coupon = () => {
                     {stat.value}
                   </h2>
                 </div>
-
                 <div className={`rounded-lg p-3 ${stat.color}`}>
                   <Icon size={22} />
                 </div>
@@ -260,7 +296,7 @@ const Coupon = () => {
         })}
       </div>
 
-      {/* Coupons Table */}
+      {/* Coupon Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-gray-200 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -292,7 +328,7 @@ const Coupon = () => {
             >
               <option value="All">All Coupons</option>
               <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
+              <option value="Inactive">Inactive / Expired</option>
             </select>
           </div>
         </div>
@@ -313,7 +349,9 @@ const Coupon = () => {
 
             <tbody className="divide-y divide-gray-100">
               {filteredCoupons.map((coupon) => {
-                const expired = new Date(coupon.expireDate) < new Date();
+                const expired = isExpired(coupon);
+                const usedCount = Number(coupon.usedCount || 0);
+                const usageLimit = Number(coupon.usageLimit || 0);
 
                 return (
                   <tr key={coupon._id} className="transition hover:bg-gray-50">
@@ -339,6 +377,7 @@ const Coupon = () => {
                       {coupon.discountType === "PERCENTAGE"
                         ? `${coupon.discountValue}%`
                         : formatPrice(coupon.discountValue)}
+
                       {coupon.discountType === "PERCENTAGE" && (
                         <p className="mt-1 text-xs font-normal text-gray-500">
                           Max {formatPrice(coupon.maxDiscount)}
@@ -359,19 +398,15 @@ const Coupon = () => {
 
                     <td className="px-5 py-4">
                       <p className="font-medium text-gray-900">
-                        {coupon.usedCount} / {coupon.usageLimit}
+                        {usedCount} / {usageLimit}
                       </p>
                       <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-gray-100">
                         <div
                           className="h-full rounded-full bg-violet-500"
                           style={{
                             width: `${
-                              coupon.usageLimit > 0
-                                ? Math.min(
-                                    (coupon.usedCount / coupon.usageLimit) *
-                                      100,
-                                    100,
-                                  )
+                              usageLimit > 0
+                                ? Math.min((usedCount / usageLimit) * 100, 100)
                                 : 0
                             }%`,
                           }}
@@ -457,7 +492,10 @@ const Coupon = () => {
           <span className="font-medium text-gray-800">
             {filteredCoupons.length}
           </span>{" "}
-          of <span className="font-medium text-gray-800">{coupons.length}</span>{" "}
+          of{" "}
+          <span className="font-medium text-gray-800">
+            {getAllCoupons?.count ?? coupons.length}
+          </span>{" "}
           coupons
         </div>
       </div>
@@ -483,7 +521,6 @@ const Coupon = () => {
                   Configure discount and coupon validity.
                 </p>
               </div>
-
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -645,7 +682,6 @@ const Coupon = () => {
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
@@ -705,43 +741,45 @@ const Coupon = () => {
                   {formatPrice(selectedCoupon.minOrderAmount)}
                 </span>
               </div>
-
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Maximum Discount</span>
                 <span className="font-medium text-gray-900">
                   {formatPrice(selectedCoupon.maxDiscount)}
                 </span>
               </div>
-
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Start Date</span>
                 <span className="font-medium text-gray-900">
                   {formatDate(selectedCoupon.startDate)}
                 </span>
               </div>
-
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Expiry Date</span>
                 <span className="font-medium text-gray-900">
                   {formatDate(selectedCoupon.expireDate)}
                 </span>
               </div>
-
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Usage</span>
                 <span className="font-medium text-gray-900">
-                  {selectedCoupon.usedCount} / {selectedCoupon.usageLimit}
+                  {selectedCoupon.usedCount ?? 0} /{" "}
+                  {selectedCoupon.usageLimit ?? 0}
                 </span>
               </div>
-
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Status</span>
                 <span
                   className={`font-medium ${
-                    selectedCoupon.isActive ? "text-green-600" : "text-gray-500"
+                    selectedCoupon.isActive && !isExpired(selectedCoupon)
+                      ? "text-green-600"
+                      : "text-gray-500"
                   }`}
                 >
-                  {selectedCoupon.isActive ? "Active" : "Inactive"}
+                  {isExpired(selectedCoupon)
+                    ? "Expired"
+                    : selectedCoupon.isActive
+                      ? "Active"
+                      : "Inactive"}
                 </span>
               </div>
             </div>
