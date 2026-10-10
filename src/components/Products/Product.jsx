@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 import {
   useAddProductMutation,
   useGetAllProductsQuery,
@@ -6,7 +7,8 @@ import {
   useDeleteProductMutation,
 } from "../../redux/ProductApi";
 
-import { FaEye, FaTrash } from "react-icons/fa";
+import { FaEye, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+
 import { BsPencilSquare } from "react-icons/bs";
 import { toast } from "react-toastify";
 
@@ -30,6 +32,10 @@ const Product = () => {
   const [sort, setSort] = useState("newest");
   const [colors, setColors] = useState("");
   const [size, setSize] = useState("");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // View/Edit modal states
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -68,6 +74,9 @@ const Product = () => {
 
       toast.success("Product added successfully!");
       setIsAddModalOpen(false);
+
+      // Show the first page after adding a product
+      setCurrentPage(1);
 
       return true;
     } catch (error) {
@@ -140,6 +149,7 @@ const Product = () => {
     colors,
     size,
     search,
+    filter,
   });
 
   // Extract products from API response
@@ -188,6 +198,65 @@ const Product = () => {
     ).values(),
   ];
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    search,
+    filter,
+    category,
+    minPrice,
+    maxPrice,
+    sort,
+    colors,
+    size,
+    itemsPerPage,
+  ]);
+
+  // Pagination calculations
+  const totalProducts = products.length;
+
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const endIndex = Math.min(startIndex + itemsPerPage, totalProducts);
+
+  // Get products for current page
+  const paginatedProducts = products.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+
+  // Keep current page valid when products are deleted
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    } else if (totalPages === 0 && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  // Generate visible page numbers
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+
+    let startPage = Math.max(1, currentPage - 2);
+
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let page = startPage; page <= endPage; page++) {
+      pages.push(page);
+    }
+
+    return pages;
+  };
+
   // Reset all filters
   const handleReset = () => {
     setSearch("");
@@ -198,13 +267,18 @@ const Product = () => {
     setSort("newest");
     setColors("");
     setSize("");
+    setCurrentPage(1);
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <section className="min-h-screen bg-[#f8f8f6] p-6 font-zurixFont">
-        <p className="text-sm text-gray-500">Loading products...</p>
+      <section className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+
+          <p className="text-sm text-gray-500">Loading products...</p>
+        </div>
       </section>
     );
   }
@@ -321,7 +395,7 @@ const Product = () => {
             </thead>
 
             <tbody>
-              {products.map((product, index) => {
+              {paginatedProducts.map((product, index) => {
                 const image = Array.isArray(product.images)
                   ? product.images[0]
                   : product.images;
@@ -346,7 +420,7 @@ const Product = () => {
                   >
                     {/* Index */}
                     <td className="px-5 py-4 text-sm text-gray-500">
-                      {index + 1}
+                      {startIndex + index + 1}
                     </td>
 
                     {/* Product Details */}
@@ -453,7 +527,7 @@ const Product = () => {
               })}
 
               {/* Empty State */}
-              {products.length === 0 && (
+              {totalProducts === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-16 text-center">
                     <p className="text-base font-medium text-gray-800">
@@ -478,15 +552,80 @@ const Product = () => {
           </table>
         </div>
 
-        {/* Table Footer */}
-        <div className="flex flex-col gap-2 border-t border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-gray-500">
-            Showing {products.length} products.
-          </p>
+        {/* Table Footer and Pagination */}
+        <div className="flex flex-col gap-4 border-t border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Product count and page size */}
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-gray-500">
+              Showing{" "}
+              <span className="font-semibold text-gray-900">
+                {totalProducts === 0 ? 0 : startIndex + 1}
+              </span>{" "}
+              to <span className="font-semibold text-gray-900">{endIndex}</span>{" "}
+              of{" "}
+              <span className="font-semibold text-gray-900">
+                {totalProducts}
+              </span>{" "}
+              products
+            </p>
 
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              aria-label="Products per page"
+              className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 outline-none focus:border-black"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={15}>15 per page</option>
+            </select>
+          </div>
+
+          {/* Fetching indicator */}
           {isFetching && (
             <p className="text-xs text-gray-500">Updating product list...</p>
           )}
+
+          {/* Pagination controls */}
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || totalPages === 0}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FaChevronLeft size={10} />
+              Previous
+            </button>
+
+            {getPageNumbers().map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                aria-current={currentPage === page ? "page" : undefined}
+                className={`h-9 min-w-9 rounded-lg px-3 text-xs font-medium transition ${
+                  currentPage === page
+                    ? "bg-black text-white"
+                    : "border border-gray-200 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+              <FaChevronRight size={10} />
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import { BiSearch, BiUser, BiUserCheck, BiCalendar } from "react-icons/bi";
+
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 import { BsEye } from "react-icons/bs";
 import { LuSlidersHorizontal } from "react-icons/lu";
@@ -13,7 +15,11 @@ const Customers = () => {
   const [registrationFilter, setRegistrationFilter] = useState("All");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  // Fetch customers from the backend API
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Fetch customers from backend API
   const {
     data: customerResponse,
     isLoading,
@@ -22,7 +28,7 @@ const Customers = () => {
     refetch,
   } = useGetAllCustomersQuery();
 
-  // Extract actual customer data from the API response
+  // Extract customer data
   const customers = Array.isArray(customerResponse?.data)
     ? customerResponse.data
     : [];
@@ -34,7 +40,9 @@ const Customers = () => {
     const matchesSearch =
       (customer.name || "").toLowerCase().includes(search) ||
       (customer.email || "").toLowerCase().includes(search) ||
-      (customer._id || "").toLowerCase().includes(search);
+      String(customer._id || "")
+        .toLowerCase()
+        .includes(search);
 
     const createdAt = customer.createdAt ? new Date(customer.createdAt) : null;
 
@@ -52,7 +60,56 @@ const Customers = () => {
     return matchesSearch && matchesRegistration;
   });
 
-  // Calculate statistics from real API data
+  // Reset pagination when search, filter, or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, registrationFilter, itemsPerPage]);
+
+  // Pagination calculations
+  const totalCustomers = filteredCustomers.length;
+
+  const totalPages = Math.ceil(totalCustomers / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const endIndex = Math.min(startIndex + itemsPerPage, totalCustomers);
+
+  // Customers displayed on the current page
+  const paginatedCustomers = filteredCustomers.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+
+  // Keep the page valid if customer results change
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    } else if (totalPages === 0 && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  // Generate visible page numbers
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+
+    let startPage = Math.max(1, currentPage - 2);
+
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let page = startPage; page <= endPage; page++) {
+      pages.push(page);
+    }
+
+    return pages;
+  };
+
+  // Calculate statistics from API data
   const currentMonthCustomers = customers.filter((customer) => {
     if (!customer.createdAt) return false;
 
@@ -111,6 +168,7 @@ const Customers = () => {
     },
   ];
 
+  // Format registration date
   const formatDate = (date) => {
     if (!date) return "—";
 
@@ -128,12 +186,11 @@ const Customers = () => {
   // Loading state
   if (isLoading) {
     return (
-      <section className="min-h-screen bg-gray-50 p-6">
-        <div className="flex min-h-64 items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
-            <p className="text-sm text-gray-500">Loading customers...</p>
-          </div>
+      <section className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+
+          <p className="text-sm text-gray-500">Loading customers...</p>
         </div>
       </section>
     );
@@ -229,6 +286,7 @@ const Customers = () => {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            {/* Search */}
             <div className="relative">
               <BiSearch
                 size={18}
@@ -244,6 +302,7 @@ const Customers = () => {
               />
             </div>
 
+            {/* Registration Filter */}
             <div className="relative">
               <LuSlidersHorizontal
                 size={16}
@@ -278,7 +337,7 @@ const Customers = () => {
             </thead>
 
             <tbody className="divide-y divide-gray-100">
-              {filteredCustomers.map((customer) => {
+              {paginatedCustomers.map((customer) => {
                 const initials = (customer.name || "C")
                   .trim()
                   .split(/\s+/)
@@ -292,6 +351,7 @@ const Customers = () => {
                     key={customer._id}
                     className="transition hover:bg-gray-50"
                   >
+                    {/* Customer Details */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 font-semibold text-gray-600">
@@ -310,19 +370,24 @@ const Customers = () => {
                       </div>
                     </td>
 
+                    {/* Customer ID */}
                     <td className="px-5 py-4 text-gray-600">
                       <span className="break-all">{customer._id}</span>
                     </td>
 
+                    {/* Joined Date */}
                     <td className="whitespace-nowrap px-5 py-4 text-gray-600">
                       {formatDate(customer.createdAt)}
                     </td>
 
+                    {/* View Customer */}
                     <td className="px-5 py-4 text-center">
                       <button
                         type="button"
                         title="View customer details"
-                        aria-label={`View ${customer.name || "customer"} details`}
+                        aria-label={`View ${
+                          customer.name || "customer"
+                        } details`}
                         onClick={() => setSelectedCustomer(customer)}
                         className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-black"
                       >
@@ -333,7 +398,8 @@ const Customers = () => {
                 );
               })}
 
-              {filteredCustomers.length === 0 && (
+              {/* Empty State */}
+              {totalCustomers === 0 && (
                 <tr>
                   <td
                     colSpan={4}
@@ -355,17 +421,75 @@ const Customers = () => {
           </table>
         </div>
 
-        {/* Table Footer */}
-        <div className="border-t border-gray-200 px-5 py-4 text-sm text-gray-500">
-          Showing{" "}
-          <span className="font-medium text-gray-800">
-            {filteredCustomers.length}
-          </span>{" "}
-          of{" "}
-          <span className="font-medium text-gray-800">
-            {customerResponse?.count ?? customers.length}
-          </span>{" "}
-          customers
+        {/* Footer and Pagination */}
+        <div className="flex flex-col gap-4 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Customer Count and Page Size */}
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-gray-500">
+              Showing{" "}
+              <span className="font-medium text-gray-800">
+                {totalCustomers === 0 ? 0 : startIndex + 1}
+              </span>{" "}
+              to <span className="font-medium text-gray-800">{endIndex}</span>{" "}
+              of{" "}
+              <span className="font-medium text-gray-800">
+                {totalCustomers}
+              </span>{" "}
+              customers
+            </p>
+
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              aria-label="Customers per page"
+              className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 outline-none focus:border-black"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={15}>15 per page</option>
+            </select>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || totalPages === 0}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FaChevronLeft size={10} />
+              Previous
+            </button>
+
+            {getPageNumbers().map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                aria-current={currentPage === page ? "page" : undefined}
+                className={`h-9 min-w-9 rounded-lg px-3 text-xs font-medium transition ${
+                  currentPage === page
+                    ? "bg-black text-white"
+                    : "border border-gray-200 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+              <FaChevronRight size={10} />
+            </button>
+          </div>
         </div>
       </div>
 

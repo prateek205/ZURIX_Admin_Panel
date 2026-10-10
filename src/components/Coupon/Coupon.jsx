@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-
 import {
   BiSearch,
   BiSolidCoupon,
@@ -8,7 +7,6 @@ import {
   BiPlus,
   BiCalendar,
 } from "react-icons/bi";
-
 import { BsEye, BsPencilSquare, BsTrash } from "react-icons/bs";
 
 import {
@@ -25,6 +23,10 @@ const Coupon = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [coupons, setCoupons] = useState([]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Get coupons API
   const { data: getAllCoupons, isLoading, isError } = useGetAllCouponsQuery();
@@ -103,6 +105,54 @@ const Coupon = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Reset pagination when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, itemsPerPage]);
+
+  // Pagination calculations
+  const totalCoupons = filteredCoupons.length;
+
+  const totalPages = Math.ceil(totalCoupons / itemsPerPage);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const endIndex = Math.min(startIndex + itemsPerPage, totalCoupons);
+
+  const paginatedCoupons = filteredCoupons.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+
+  // Keep current page valid when coupon data changes
+  useEffect(() => {
+    if (totalPages === 0) {
+      if (currentPage !== 1) setCurrentPage(1);
+    } else if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  // Generate page numbers
+  const getPageNumbers = () => {
+    const maxVisiblePages = 5;
+    const pages = [];
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let page = startPage; page <= endPage; page++) {
+      pages.push(page);
+    }
+
+    return pages;
+  };
 
   // Statistics
   const activeCount = coupons.filter(
@@ -215,7 +265,6 @@ const Coupon = () => {
 
     try {
       if (selectedCoupon) {
-        // Update API has not been connected yet.
         toast.info("Update coupon API is not connected yet.");
         return;
       }
@@ -227,9 +276,7 @@ const Coupon = () => {
       setShowModal(false);
       setSelectedCoupon(null);
       resetForm();
-
-      // The GET query refreshes because the mutation
-      // invalidates the Coupon cache tag.
+      setCurrentPage(1);
     } catch (error) {
       console.error("CREATE COUPON ERROR:", error);
 
@@ -239,7 +286,7 @@ const Coupon = () => {
     }
   };
 
-  // Delete is local only until a delete API is connected.
+  // Delete is local only until a delete API is connected
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this coupon?")) {
       return;
@@ -253,7 +300,7 @@ const Coupon = () => {
   // Loading state
   if (isLoading) {
     return (
-      <section className="min-h-screen bg-gray-50 p-8">
+      <section className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
         <div className="flex min-h-64 items-center justify-center">
           <div className="text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
@@ -335,6 +382,7 @@ const Coupon = () => {
 
       {/* Coupon Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        {/* Search and filter */}
         <div className="flex flex-col gap-4 border-b border-gray-200 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">All Coupons</h2>
@@ -372,6 +420,7 @@ const Coupon = () => {
           </div>
         </div>
 
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
@@ -387,7 +436,7 @@ const Coupon = () => {
             </thead>
 
             <tbody className="divide-y divide-gray-100">
-              {filteredCoupons.map((coupon) => {
+              {paginatedCoupons.map((coupon) => {
                 const expired = isExpired(coupon);
                 const usedCount = Number(coupon.usedCount || 0);
                 const usageLimit = Number(coupon.usageLimit || 0);
@@ -507,7 +556,7 @@ const Coupon = () => {
                 );
               })}
 
-              {filteredCoupons.length === 0 && (
+              {paginatedCoupons.length === 0 && (
                 <tr>
                   <td
                     colSpan={7}
@@ -532,20 +581,84 @@ const Coupon = () => {
           </table>
         </div>
 
-        <div className="border-t border-gray-200 px-5 py-4 text-sm text-gray-500">
-          Showing{" "}
-          <span className="font-medium text-gray-800">
-            {filteredCoupons.length}
-          </span>{" "}
-          of{" "}
-          <span className="font-medium text-gray-800">
-            {getAllCoupons?.count ?? coupons.length}
-          </span>{" "}
-          coupons
+        {/* Pagination footer */}
+        <div className="flex flex-col gap-4 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 text-sm text-gray-500 sm:flex-row sm:items-center">
+            <p>
+              Showing{" "}
+              <span className="font-medium text-gray-800">
+                {totalCoupons === 0 ? 0 : startIndex + 1}
+              </span>
+              {" - "}
+              <span className="font-medium text-gray-800">
+                {endIndex}
+              </span> of{" "}
+              <span className="font-medium text-gray-800">{totalCoupons}</span>{" "}
+              coupons
+            </p>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="coupon-page-size">Show:</label>
+
+              <select
+                id="coupon-page-size"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 outline-none focus:border-gray-400"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+              </select>
+
+              <span>per page</span>
+            </div>
+          </div>
+
+          {/* Page controls */}
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || totalPages === 0}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+
+            {getPageNumbers().map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                className={`h-9 min-w-9 rounded-lg px-3 text-sm font-medium transition ${
+                  currentPage === page
+                    ? "bg-gray-900 text-white"
+                    : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Create Coupon Form */}
+      {/* Create / Edit Coupon Form */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -763,7 +876,7 @@ const Coupon = () => {
         </div>
       )}
 
-      {/* Separate Coupon Details Model */}
+      {/* Coupon Details Modal */}
       <CouponModel
         isOpen={Boolean(selectedCoupon) && !showModal}
         coupon={selectedCoupon}
