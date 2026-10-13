@@ -10,6 +10,7 @@ import Order from "./pages/order";
 import Customer from "./pages/customer";
 import Coupen from "./pages/coupen";
 import ForgotPassword from "./components/AdminAuth/forgotPassword";
+import ResetPassword from "./components/AdminAuth/reset-password";
 
 const App = () => {
   return (
@@ -31,6 +32,7 @@ const App = () => {
       <Routes>
         <Route path="/login" element={<Auth />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<AdminLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />

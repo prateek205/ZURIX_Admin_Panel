@@ -34,6 +34,14 @@ const AdminApi = baseApi.injectEndpoints({
         body: data,
       }),
     }),
+
+    adminResetPassword: builder.mutation({
+      query: (data) => ({
+        url: "/admin/reset-password",
+        method: "POST",
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -42,4 +50,5 @@ export const {
   useAdminProfileQuery,
   useAdminLogoutMutation,
   useAdminForgotPasswordMutation,
+  useAdminResetPasswordMutation,
 } = AdminApi;
