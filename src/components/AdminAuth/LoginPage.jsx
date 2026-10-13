@@ -19,7 +19,7 @@ const Login = () => {
       const response = await adminLogin({
         email,
         password,
-      });
+      }).unwrap();
 
       console.log("LOGIN_DATA:", response);
 
@@ -117,6 +117,7 @@ const Login = () => {
 
                 <button
                   type="button"
+                  onClick={() => navigate("/forgot-password")}
                   className="text-xs text-gray-500 hover:text-black transition"
                 >
                   Forgot Password?
