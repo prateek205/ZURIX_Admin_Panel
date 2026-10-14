@@ -8,9 +8,29 @@ const initialForm = {
   category: "",
   price: "",
   salePrice: "",
-  stock: "",
   size: [],
   colors: [],
+  variants: [],
+};
+
+const SIZE_OPTIONS = ["Small", "Medium", "Large", "X-Large"];
+const COLOR_OPTIONS = ["Red", "Green", "Blue", "Violet"];
+
+// Create every color-size combination while preserving existing stock.
+const buildVariantMatrix = (colors, sizes, existingVariants = []) => {
+  return colors.flatMap((color) =>
+    sizes.map((size) => {
+      const existing = existingVariants.find(
+        (variant) => variant.color === color && variant.size === size,
+      );
+
+      return {
+        color,
+        size,
+        stock: existing ? existing.stock : "",
+      };
+    }),
+  );
 };
 
 const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
@@ -42,10 +62,35 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
 
   const handleMultiSelect = (e) => {
     const { name, selectedOptions } = e.target;
+    const selectedValues = Array.from(
+      selectedOptions,
+      (option) => option.value,
+    );
 
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: selectedValues,
+      };
+
+      const colors = name === "colors" ? selectedValues : prev.colors;
+
+      const sizes = name === "size" ? selectedValues : prev.size;
+
+      updated.variants = buildVariantMatrix(colors, sizes, prev.variants);
+
+      return updated;
+    });
+  };
+
+  const handleVariantStockChange = (color, size, value) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: Array.from(selectedOptions, (option) => option.value),
+      variants: prev.variants.map((variant) =>
+        variant.color === color && variant.size === size
+          ? { ...variant, stock: value }
+          : variant,
+      ),
     }));
   };
 
@@ -56,6 +101,42 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!formData.colors.length || !formData.size.length) {
+      alert("Please select at least one color and one size.");
+      return;
+    }
+
+    if (!formData.variants.length) {
+      alert("Please configure stock for the selected variants.");
+      return;
+    }
+
+    const invalidVariant = formData.variants.find(
+      (variant) =>
+        variant.stock === "" ||
+        variant.stock === null ||
+        !Number.isInteger(Number(variant.stock)) ||
+        Number(variant.stock) < 0,
+    );
+
+    if (invalidVariant) {
+      alert(
+        `Enter a valid non-negative stock quantity for ${invalidVariant.color} / ${invalidVariant.size}.`,
+      );
+      return;
+    }
+
+    const variants = formData.variants.map((variant) => ({
+      color: variant.color,
+      size: variant.size,
+      stock: Number(variant.stock),
+    }));
+
+    const totalStock = variants.reduce(
+      (total, variant) => total + variant.stock,
+      0,
+    );
+
     const payload = new FormData();
 
     payload.append("name", formData.name.trim());
@@ -63,10 +144,17 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
     payload.append("category", formData.category);
     payload.append("price", formData.price);
     payload.append("salePrice", formData.salePrice);
-    payload.append("stock", formData.stock);
 
+    // The backend receives variants as a JSON string.
+    payload.append("variants", JSON.stringify(variants));
+
+    // Optional compatibility field for existing code.
+    payload.append("stock", String(totalStock));
+
+    // Preserve compatibility with existing frontend/backend fields.
     formData.size.forEach((item) => payload.append("size", item));
     formData.colors.forEach((item) => payload.append("colors", item));
+
     images.forEach((file) => payload.append("images", file));
 
     const success = await onSave(payload);
@@ -79,6 +167,11 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
 
   const inputClass =
     "mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-black disabled:opacity-60";
+
+  const totalStock = formData.variants.reduce(
+    (total, variant) => total + (Number(variant.stock) || 0),
+    0,
+  );
 
   return (
     <div
@@ -93,7 +186,7 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Add Product</h2>
             <p className="mt-1 text-xs text-gray-500">
-              Enter product details and upload images.
+              Enter product details, variant stock, and images.
             </p>
           </div>
 
@@ -123,7 +216,6 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
 
             <div>
               <label className="text-sm font-medium">Category *</label>
-
               <select
                 name="category"
                 value={formData.category}
@@ -160,6 +252,7 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
                 type="number"
                 name="price"
                 min="0"
+                step="0.01"
                 value={formData.price}
                 onChange={handleChange}
                 required
@@ -169,29 +262,17 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Sale Price</label>
+              <label className="text-sm font-medium">Sale Price *</label>
               <input
                 type="number"
                 name="salePrice"
                 min="0"
+                step="0.01"
                 value={formData.salePrice}
-                onChange={handleChange}
-                className={inputClass}
-                placeholder="Enter sale price"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Stock *</label>
-              <input
-                type="number"
-                name="stock"
-                min="0"
-                value={formData.stock}
                 onChange={handleChange}
                 required
                 className={inputClass}
-                placeholder="Enter stock quantity"
+                placeholder="Enter sale price"
               />
             </div>
 
@@ -205,10 +286,11 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
                 required
                 className={`${inputClass} min-h-28`}
               >
-                <option value="Small">Small</option>
-                <option value="Medium">Medium</option>
-                <option value="Large">Large</option>
-                <option value="X-Large">X-Large</option>
+                {SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">
                 Hold Ctrl (Windows) or Command (Mac) to select multiple.
@@ -225,14 +307,93 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
                 required
                 className={`${inputClass} min-h-28`}
               >
-                <option value="Red">Red</option>
-                <option value="Green">Green</option>
-                <option value="Blue">Blue</option>
-                <option value="Violet">Violet</option>
+                {COLOR_OPTIONS.map((color) => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">
                 Select one or more colors.
               </p>
+            </div>
+
+            {/* Stock input for every color-size combination */}
+            <div className="sm:col-span-2">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Variant Inventory
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Enter the available quantity for each color and size.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gray-100 px-3 py-2 text-sm">
+                  Total stock: <strong>{totalStock}</strong>
+                </div>
+              </div>
+
+              {formData.variants.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full min-w-[420px] text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-600">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Color</th>
+                        <th className="px-4 py-3 font-medium">Size</th>
+                        <th className="px-4 py-3 font-medium">
+                          Stock Quantity
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-gray-100">
+                      {formData.variants.map((variant) => (
+                        <tr key={`${variant.color}-${variant.size}`}>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                className="h-3 w-3 rounded-full border border-gray-300"
+                                style={{
+                                  backgroundColor: variant.color.toLowerCase(),
+                                }}
+                              />
+                              {variant.color}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-3">{variant.size}</td>
+
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              required
+                              value={variant.stock}
+                              onChange={(e) =>
+                                handleVariantStockChange(
+                                  variant.color,
+                                  variant.size,
+                                  e.target.value,
+                                )
+                              }
+                              className="w-full max-w-36 rounded-lg border border-gray-200 px-3 py-2 outline-none focus:border-black"
+                              placeholder="Quantity"
+                              aria-label={`${variant.color} ${variant.size} stock`}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+                  Select at least one color and one size to configure inventory.
+                </div>
+              )}
             </div>
 
             <div className="sm:col-span-2">
@@ -250,14 +411,18 @@ const ProductCreateModal = ({ isOpen, onClose, onSave, isSaving = false }) => {
 
             <div className="sm:col-span-2">
               <label className="text-sm font-medium">Product Images *</label>
+
               <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 px-5 py-8 text-center transition hover:border-black">
                 <FaCloudUploadAlt className="mb-2 text-2xl text-gray-500" />
+
                 <span className="text-sm font-medium">
                   Click to upload images
                 </span>
+
                 <span className="mt-1 text-xs text-gray-400">
                   Select one or multiple image files
                 </span>
+
                 <input
                   type="file"
                   accept="image/*"
